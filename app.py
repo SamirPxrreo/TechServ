@@ -11,8 +11,8 @@ app.secret_key = 'techserv_secret_2025'
 # Cambia estos valores según tu servidor MySQL
 app.config['MYSQL_HOST'] = 'sql10.freesqldatabase.com'
 app.config['MYSQL_USER'] = 'sql10821046'
-app.config['MYSQL_PASSWORD'] = 'dHlMjH5uyP'  # tu contraseña
-app.config['MYSQL_DB'] = 'techserv_fy9t'
+app.config['MYSQL_PASSWORD'] = 'dHlMjH5uyP'
+app.config['MYSQL_DB'] = 'sql10821046'
 app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
 app.config['MYSQL_CHARSET'] = 'utf8mb4'
 
