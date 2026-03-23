@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TechServ - Mantenimiento de Equipos</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+<!-- LOADER -->
+<div id="loader">
+  <div class="spinner"></div>
+</div>
+
+<!-- NAVBAR -->
+<div class="nav">
+  <div class="logo">⬡ TechServ</div>
+
+  <div class="menu">
+    <a href="#servicios">Servicios</a>
+    <a href="#nosotros">Nosotros</a>
+    <a href="#contacto">Contacto</a>
+  </div>
+
+  <div class="nav-right">
+    <div id="nav-guest" class="buttons">
+      <a class="login-btn" onclick="abrirModal('login')">Iniciar Sesión</a>
+      <a class="start-btn" onclick="abrirModal('registro')">Registrarse</a>
+    </div>
+
+    <div id="nav-user" class="nav-user-area" style="display:none">
+      <span id="nav-bienvenida"></span>
+
+      <button class="carrito-btn" onclick="toggleCarrito()">
+        🛒 Carrito <span id="carrito-count" class="badge">0</span>
+      </button>
+
+      <a id="nav-admin-link" href="/admin" style="display:none" class="admin-link">Panel Admin</a>
+
+      <button class="logout-btn" onclick="cerrarSesion()">Salir</button>
+    </div>
+  </div>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-text anim">
+    <div class="tag">🔧 Servicio Técnico Profesional</div>
+    <h1>Tu equipo en<br>las mejores manos.</h1>
+    <p>Soluciones de mantenimiento preventivo y correctivo.</p>
+
+    <div class="hero-buttons">
+      <a class="primary" href="#servicios">Ver Servicios →</a>
+      <a class="secondary" onclick="abrirModal('registro')">Crear Cuenta Gratis</a>
+    </div>
+  </div>
+
+  <div class="hero-visual anim">
+    <div class="hero-card">
+      <div class="hc-icon">💻</div>
+      <div class="hc-text">
+        <strong>Diagnóstico Gratuito</strong>
+        <span>Al registrarte hoy</span>
+      </div>
+    </div>
+
+    <div class="hero-stats">
+      <div class="stat"><strong>+500</strong><span>Equipos</span></div>
+      <div class="stat"><strong>98%</strong><span>Satisfacción</span></div>
+      <div class="stat"><strong>24h</strong><span>Respuesta</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- SERVICIOS -->
+<section id="servicios" class="section-servicios">
+  <div class="section-header anim">
+    <h2>Nuestros Servicios</h2>
+    <p>Soluciones completas</p>
+  </div>
+
+  <div class="servicios-grid">
+    {% for s in servicios %}
+    <div class="servicio-card anim">
+      <div class="servicio-icon">{{ s.icono }}</div>
+      <h3>{{ s.nombre }}</h3>
+      <p>{{ s.descripcion }}</p>
+
+      <div class="servicio-footer">
+        <span class="precio">${{ "{:,.0f}".format(s.precio) }}</span>
+
+        <button class="btn-agregar"
+          onclick="agregarAlCarrito({{ s.id }}, '{{ s.nombre }}', this)">
+          + Agregar
+        </button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<!-- NOSOTROS -->
+<section id="nosotros" class="section-nosotros anim">
+  <div class="nosotros-inner">
+    <div class="nosotros-text">
+      <h2>¿Por qué TechServ?</h2>
+      <p>Soluciones rápidas, efectivas y económicas.</p>
+
+      <ul class="nosotros-lista">
+        <li>✅ Técnicos certificados</li>
+        <li>✅ Garantía</li>
+        <li>✅ Atención rápida</li>
+        <li>✅ Soporte incluido</li>
+      </ul>
+    </div>
+
+    <div class="nosotros-cards">
+      <div class="info-card">🏢 Empresas</div>
+      <div class="info-card">👨‍💼 Trabajadores</div>
+      <div class="info-card">🎓 Estudiantes</div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACTO -->
+<section id="contacto" class="section-contacto anim">
+  <h2>¿Listo para comenzar?</h2>
+  <p>Regístrate gratis</p>
+  <button class="primary large" onclick="abrirModal('registro')">
+    Crear Cuenta Gratis →
+  </button>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="logo">⬡ TechServ</div>
+    <p>© 2026 TechServ</p>
+  </div>
+</footer>
+
+<!-- MODAL LOGIN -->
+<div id="modal-login" class="modal-overlay" onclick="cerrarModalOverlay(event, 'login')">
+  <div class="modal">
+    <button class="modal-close" onclick="cerrarModal('login')">×</button>
+    <h2>Iniciar Sesión</h2>
+
+    <div id="login-error" class="form-error" style="display:none"></div>
+
+    <div class="form-group">
+      <label>Correo</label>
+      <input type="email" id="login-correo">
+    </div>
+
+    <div class="form-group">
+      <label>Contraseña</label>
+      <input type="password" id="login-pass">
+    </div>
+
+    <button class="btn-modal-primary" onclick="doLogin()">Entrar</button>
+  </div>
+</div>
+
+
+<!-- MODAL REGISTRO -->
+<div id="modal-registro" class="modal-overlay" onclick="cerrarModalOverlay(event, 'registro')">
+  <div class="modal">
+    <button class="modal-close" onclick="cerrarModal('registro')">×</button>
+    <h2>Registro</h2>
+
+    <div id="registro-error" class="form-error" style="display:none"></div>
+
+    <div class="form-group">
+      <label>Nombre</label>
+      <input id="reg-nombre">
+    </div>
+
+    <div class="form-group">
+      <label>Teléfono</label>
+      <div class="telefono-input">
+        <select id="codigo-pais">
+          <option value="+57">🇨🇴 +57</option>
+          <option value="+1">🇺🇸 +1</option>
+          <option value="+34">🇪🇸 +34</option>
+        </select>
+        <input id="reg-telefono">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Correo</label>
+      <input id="reg-correo">
+    </div>
+
+    <div class="form-group">
+      <label>Contraseña</label>
+      <input type="password" id="reg-pass">
+    </div>
+
+    <div class="pass-rules">
+      <span id="r1">• 8 caracteres</span><br>
+      <span id="r2">• 1 mayúscula</span><br>
+      <span id="r3">• 1 número</span><br>
+      <span id="r4">• 1 símbolo</span>
+    </div>
+
+    <button class="btn-modal-primary" onclick="doRegistro()">Crear</button>
+  </div>
+</div>
+
+<!-- CARRITO -->
+<div id="carrito-panel" class="carrito-panel" style="display:none">
+  <div class="carrito-header">
+    <h3>🛒 Mi Carrito</h3>
+    <button onclick="toggleCarrito()">×</button>
+  </div>
+
+  <div id="carrito-items" class="carrito-items">
+    <p class="carrito-vacio">Tu carrito está vacío</p>
+  </div>
+
+  <div id="carrito-footer" class="carrito-footer" style="display:none">
+    <div class="carrito-total">
+      Total: <strong id="carrito-total">$0</strong>
+    </div>
+
+    <textarea id="carrito-notas" placeholder="Notas..."></textarea>
+
+    <button class="btn-modal-primary" onclick="confirmarPedido()">Confirmar Pedido</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="toast"></div>
+
+<script src="{{ url_for('static', filename='main.js') }}"></script>
+
+<!-- ANIMACIONES + PASSWORD -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+  // Animaciones
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('show');
+      }
+    });
+  });
+
+  document.querySelectorAll('.anim').forEach(el => observer.observe(el));
+
+  // Password rules visual
+  const pass = document.getElementById('reg-pass');
+
+  if (pass) {
+    pass.addEventListener('input', () => {
+      const val = pass.value;
+
+      document.getElementById('r1').classList.toggle('valid', val.length >= 8);
+      document.getElementById('r2').classList.toggle('valid', /[A-Z]/.test(val));
+      document.getElementById('r3').classList.toggle('valid', /\d/.test(val));
+      document.getElementById('r4').classList.toggle('valid', /[\W]/.test(val));
+    });
+  }
+
+});
+</script>
+
+</body>
+</html>

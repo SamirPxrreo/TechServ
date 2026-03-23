@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TechServ - Panel Administrador</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="admin-body">
+
+<div class="admin-nav">
+  <div class="logo">⬡ TechServ <span class="admin-badge">Admin</span></div>
+  <div class="admin-nav-right">
+    <a href="/" class="admin-back">← Volver al sitio</a>
+    <button class="logout-btn" onclick="fetch('/api/logout',{method:'POST'}).then(()=>location.href='/')">Salir</button>
+  </div>
+</div>
+
+<div class="admin-container">
+
+  <!-- Stats -->
+  <div class="admin-stats">
+    <div class="stat-card blue">
+      <div class="sc-icon">👥</div>
+      <div class="sc-info"><strong>{{ total_usuarios }}</strong><span>Usuarios registrados</span></div>
+    </div>
+    <div class="stat-card green">
+      <div class="sc-icon">📋</div>
+      <div class="sc-info"><strong>{{ total_pedidos }}</strong><span>Pedidos totales</span></div>
+    </div>
+    <div class="stat-card orange">
+      <div class="sc-icon">💰</div>
+      <div class="sc-info"><strong>${{ "{:,.0f}".format(ingresos) }}</strong><span>Ingresos completados</span></div>
+    </div>
+  </div>
+
+  <!-- Pedidos -->
+  <div class="admin-section">
+    <h2>Pedidos Recientes</h2>
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>#</th><th>Cliente</th><th>Correo</th><th>Total</th><th>Estado</th><th>Fecha</th><th>Acción</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in pedidos %}
+          <tr id="pedido-{{ p.id }}">
+            <td>{{ p.id }}</td>
+            <td>{{ p.nombre }}</td>
+            <td>{{ p.correo }}</td>
+            <td>${{ "{:,.0f}".format(p.total) }}</td>
+            <td>
+              <span class="estado-badge estado-{{ p.estado.replace(' ','-') }}">{{ p.estado }}</span>
+            </td>
+            <td>{{ p.fecha.strftime('%d/%m/%Y') if p.fecha else '' }}</td>
+            <td>
+              <select class="estado-select" onchange="actualizarEstado({{ p.id }}, this.value)">
+                <option value="pendiente" {% if p.estado=='pendiente' %}selected{% endif %}>Pendiente</option>
+                <option value="en proceso" {% if p.estado=='en proceso' %}selected{% endif %}>En proceso</option>
+                <option value="completado" {% if p.estado=='completado' %}selected{% endif %}>Completado</option>
+                <option value="cancelado" {% if p.estado=='cancelado' %}selected{% endif %}>Cancelado</option>
+              </select>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="7" style="text-align:center;color:#999">No hay pedidos aún</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Usuarios -->
+  <div class="admin-section">
+    <h2>Usuarios Registrados</h2>
+    <div class="table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr><th>#</th><th>Nombre</th><th>Teléfono</th><th>Correo</th><th>Rol</th><th>Registro</th></tr>
+        </thead>
+        <tbody>
+          {% for u in usuarios %}
+          <tr>
+            <td>{{ u.id }}</td>
+            <td>{{ u.nombre }}</td>
+            <td>{{ u.telefono }}</td>
+            <td>{{ u.correo }}</td>
+            <td><span class="rol-badge rol-{{ u.rol }}">{{ u.rol }}</span></td>
+            <td>{{ u.fecha_registro.strftime('%d/%m/%Y') if u.fecha_registro else '' }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="6" style="text-align:center;color:#999">No hay usuarios</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function actualizarEstado(id, estado) {
+  fetch(`/api/admin/pedido/${id}`, {
+    method: 'PUT',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({estado})
+  }).then(r => r.json()).then(d => {
+    const badge = document.querySelector(`#pedido-${id} .estado-badge`);
+    badge.textContent = estado;
+    badge.className = `estado-badge estado-${estado.replace(' ','-')}`;
+  });
+}
+</script>
+</body>
+</html>
