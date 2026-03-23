@@ -1,3 +1,12 @@
-flask==3.0.3
-flask-mysqldb==2.0.0
-werkzeug==3.0.3
+blinker==1.9.0
+click==8.3.1
+colorama==0.4.6
+Flask==3.0.3
+Flask-MySQLdb==2.0.0
+gunicorn==25.1.0
+itsdangerous==2.2.0
+Jinja2==3.1.6
+MarkupSafe==3.0.3
+mysqlclient==2.2.8
+packaging==26.0
+Werkzeug==3.0.3
