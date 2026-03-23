@@ -9,10 +9,10 @@ app.secret_key = 'techserv_secret_2025'
 
 # ── Configuración MySQL ──────────────────────────────────────
 # Cambia estos valores según tu servidor MySQL
-app.config['MYSQL_HOST'] = 'localhost'
-app.config['MYSQL_USER'] = 'root'
-app.config['MYSQL_PASSWORD'] = ''  # tu contraseña
-app.config['MYSQL_DB'] = 'techserv'
+app.config['MYSQL_HOST'] = 'dpg-d70n6gk50q8c73aaq7c0-a'
+app.config['MYSQL_USER'] = 'techserv_user'
+app.config['MYSQL_PASSWORD'] = 'fOnl3nLsbrfQazL0oJxrUUmM2PvBVnJ6'  # tu contraseña
+app.config['MYSQL_DB'] = 'techserv_fy9t'
 app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
 app.config['MYSQL_CHARSET'] = 'utf8mb4'
 
