@@ -3,15 +3,26 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 import os
 import psycopg
+import psycopg.rows
+
+app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 app = Flask(__name__)
 app.secret_key = 'techserv_secret_2025'
+
+def get_db_connection():
+    try:
+        return psycopg.connect(DATABASE_URL, sslmode="require")
+    except Exception as e:
+        print("Error conexión DB:", e)
+        raise
 
 # ── Conexión PostgreSQL ──────────────────────────────────────
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 def get_db_connection():
-    return psycopg.connect(DATABASE_URL)
+    return psycopg.connect(DATABASE_URL, sslmode="require")
 
 # ── Decoradores ──────────────────────────────────────────────
 def login_required(f):
