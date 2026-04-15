@@ -122,7 +122,11 @@ def registro():
     session['correo'] = correo
     session['rol'] = 'usuario'
 
-    return jsonify({'mensaje': f'Bienvenido {nombre}'})
+    return jsonify({
+        'mensaje': f'Bienvenido {nombre}',
+        'nombre': nombre,
+        'rol': 'usuario'
+    })
 
 
 # ── LOGIN ────────────────────────────────────────────────────
@@ -165,10 +169,14 @@ def sesion():
     if 'usuario_id' in session:
         return jsonify({
             'autenticado': True,
-            'nombre': session['nombre'],
-            'rol': session['rol']
+            'mensaje': f'Bienvenido {session["nombre"]}',
+            'nombre': session["nombre"],
+            'rol': session["rol"]
         })
-    return jsonify({'autenticado': False})
+
+    return jsonify({
+        'autenticado': False
+    })
 
 
 if __name__ == '__main__':
