@@ -6,6 +6,7 @@ import psycopg
 import psycopg.rows
 
 app = Flask(__name__)
+app.config['PROPAGATE_EXCEPTIONS'] = True
 app.secret_key = 'techserv_secret_2025'
 
 app.config['SESSION_COOKIE_SECURE'] = True
