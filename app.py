@@ -12,7 +12,7 @@ app.secret_key = 'techserv_secret_2025'
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 def get_db_connection():
-    return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+    return psycopg.connect(DATABASE_URL)
 
 # ── Decoradores ──────────────────────────────────────────────
 def login_required(f):
@@ -35,7 +35,7 @@ def admin_required(f):
 @app.route('/')
 def index():
     conn = get_db_connection()
-    cur = conn.cursor()
+    cur = conn.cursor(row_factory=psycopg.rows.dict_row)
     cur.execute("SELECT * FROM servicios WHERE activo = TRUE")
     servicios = cur.fetchall()
     cur.close()
@@ -58,7 +58,7 @@ def registro():
         return jsonify({'error': 'Mínimo 6 caracteres'}), 400
 
     conn = get_db_connection()
-    cur = conn.cursor()
+    cur = conn.cursor(row_factory=psycopg.rows.dict_row)
 
     cur.execute("SELECT id FROM usuarios WHERE correo = %s", (correo,))
     if cur.fetchone():
@@ -93,7 +93,7 @@ def login():
     contrasena = data.get('contrasena', '')
 
     conn = get_db_connection()
-    cur = conn.cursor()
+    cur = conn.cursor(row_factory=psycopg.rows.dict_row)
 
     cur.execute("SELECT * FROM usuarios WHERE correo = %s", (correo,))
     usuario = cur.fetchone()
@@ -133,7 +133,7 @@ def sesion():
 @login_required
 def ver_carrito():
     conn = get_db_connection()
-    cur = conn.cursor()
+    cur = conn.cursor(row_factory=psycopg.rows.dict_row)
 
     cur.execute("""
         SELECT c.id, s.nombre, s.precio, s.icono, c.cantidad,
@@ -158,7 +158,7 @@ def agregar_carrito():
     servicio_id = request.json.get('servicio_id')
 
     conn = get_db_connection()
-    cur = conn.cursor()
+    cur = conn.cursor(row_factory=psycopg.rows.dict_row)
 
     cur.execute(
         "SELECT id, cantidad FROM carrito WHERE usuario_id=%s AND servicio_id=%s",
@@ -188,7 +188,7 @@ def agregar_carrito():
 @login_required
 def eliminar_carrito(item_id):
     conn = get_db_connection()
-    cur = conn.cursor()
+    cur = conn.cursor(row_factory=psycopg.rows.dict_row)
 
     cur.execute(
         "DELETE FROM carrito WHERE id=%s AND usuario_id=%s",
@@ -208,7 +208,7 @@ def confirmar_pedido():
     notas = request.json.get('notas', '')
 
     conn = get_db_connection()
-    cur = conn.cursor()
+    cur = conn.cursor(row_factory=psycopg.rows.dict_row)
 
     cur.execute("""
         SELECT c.servicio_id, c.cantidad, s.precio
@@ -251,7 +251,7 @@ def confirmar_pedido():
 @admin_required
 def admin():
     conn = get_db_connection()
-    cur = conn.cursor()
+    cur = conn.cursor(row_factory=psycopg.rows.dict_row)
 
     cur.execute("SELECT * FROM usuarios ORDER BY fecha_registro DESC")
     usuarios = cur.fetchall()
