@@ -51,16 +51,20 @@ def admin_required(f):
 # ── HOME ─────────────────────────────────────────────────────
 @app.route('/')
 def index():
-    conn = get_db_connection()
-    cur = conn.cursor(row_factory=psycopg.rows.dict_row)
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor(row_factory=psycopg.rows.dict_row)
 
-    cur.execute("SELECT * FROM servicios WHERE activo = TRUE")
-    servicios = cur.fetchall()
+        cur.execute("SELECT * FROM servicios WHERE activo = TRUE")
+        servicios = cur.fetchall()
 
-    cur.close()
-    conn.close()
+        cur.close()
+        conn.close()
 
-    return render_template('index.html', servicios=servicios)
+        return str(servicios)
+
+    except Exception as e:
+        return f"ERROR REAL ❌ {repr(e)}"
 
 
 # ── LOGIN TEST DB (DEBUG OPCIONAL) ───────────────────────────
