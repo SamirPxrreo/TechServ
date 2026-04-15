@@ -3,7 +3,6 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 import os
 import psycopg
-from psycopg2.extras import RealDictCursor
 
 app = Flask(__name__)
 app.secret_key = 'techserv_secret_2025'
