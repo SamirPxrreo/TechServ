@@ -13,17 +13,12 @@ app.config['SESSION_COOKIE_SECURE'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 
-def get_db_connection():
-    try:
-        return psycopg.connect(DATABASE_URL, sslmode="require")
-    except Exception as e:
-        print("Error conexión DB:", e)
-        raise
-
 # ── Conexión PostgreSQL ──────────────────────────────────────
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 def get_db_connection():
+    if not DATABASE_URL:
+        raise Exception("DATABASE_URL no está configurada en Render")
     return psycopg.connect(DATABASE_URL, sslmode="require")
 
 # ── Decoradores ──────────────────────────────────────────────
