@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, jsonify, session, redirect
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 import os
-import psycopg2
+import psycopg
 from psycopg2.extras import RealDictCursor
 
 app = Flask(__name__)
