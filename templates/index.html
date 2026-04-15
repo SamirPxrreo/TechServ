@@ -88,12 +88,14 @@
   <div class="servicios-grid">
     {% for s in servicios %}
     <div class="servicio-card anim">
-      <div class="servicio-icon">{{ s.icono }}</div>
+      <div class="servicio-icon">{{ s.icono or '🔧' }}</div>
       <h3>{{ s.nombre }}</h3>
       <p>{{ s.descripcion }}</p>
 
       <div class="servicio-footer">
-        <span class="precio">${{ "{:,.0f}".format(s.precio) }}</span>
+        <span class="precio">
+        ${{ "{:,.0f}".format(s.precio|float) }}
+        </span>
 
         <button class="btn-agregar"
           onclick="agregarAlCarrito({{ s.id }}, '{{ s.nombre }}', this)">
