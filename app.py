@@ -41,13 +41,17 @@ def admin_required(f):
 # ── Rutas principales ────────────────────────────────────────
 @app.route('/')
 def index():
-    conn = get_db_connection()
-    cur = conn.cursor(row_factory=psycopg.rows.dict_row)
-    cur.execute("SELECT * FROM servicios WHERE activo = TRUE")
-    servicios = cur.fetchall()
-    cur.close()
-    conn.close()
-    return render_template('index.html', servicios=servicios)
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT 1")
+        data = cur.fetchone()
+        cur.close()
+        conn.close()
+        return f"DB OK ✅ {data}"
+
+    except Exception as e:
+        return f"DB ERROR ❌ {str(e)}"
 
 # ── Registro ─────────────────────────────────────────────────
 @app.route('/api/registro', methods=['POST'])
