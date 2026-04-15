@@ -81,12 +81,18 @@ def login_required(f):
     return decorated
 
 
+# ── ADMIN REQUIRED ──────────────────────────────────────────
 def admin_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        if 'usuario_id' not in session or session.get('rol') != 'admin':
+        if 'usuario_id' not in session:
             return redirect('/')
+
+        if session.get('rol') != 'admin':
+            return redirect('/')
+
         return f(*args, **kwargs)
+
     return decorated
 
 
