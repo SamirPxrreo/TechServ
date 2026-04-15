@@ -179,5 +179,128 @@ def sesion():
     })
 
 
+# ── CARRITO: AGREGAR ─────────────────────────────────────────
+@app.route('/api/carrito/agregar', methods=['POST'])
+def carrito_agregar():
+    if 'usuario_id' not in session:
+        return jsonify({'error': 'No autenticado'}), 401
+
+    data = request.json
+    servicio_id = data.get('servicio_id')
+
+    if not servicio_id:
+        return jsonify({'error': 'Servicio inválido'}), 400
+
+    if 'carrito' not in session:
+        session['carrito'] = []
+
+    carrito = session['carrito']
+
+    # verificar si ya existe
+    for item in carrito:
+        if item['servicio_id'] == servicio_id:
+            item['cantidad'] += 1
+            session['carrito'] = carrito
+            session.modified = True
+            return jsonify({'mensaje': 'Agregado'})
+
+    # traer info del servicio
+    conn = get_db_connection()
+    cur = conn.cursor(row_factory=psycopg.rows.dict_row)
+
+    cur.execute("SELECT id, nombre, precio FROM servicios WHERE id = %s", (servicio_id,))
+    servicio = cur.fetchone()
+
+    cur.close()
+    conn.close()
+
+    if not servicio:
+        return jsonify({'error': 'Servicio no encontrado'}), 404
+
+    carrito.append({
+        'id': servicio['id'],
+        'servicio_id': servicio['id'],
+        'nombre': servicio['nombre'],
+        'precio': float(servicio['precio']),
+        'cantidad': 1
+    })
+
+    session['carrito'] = carrito
+    session.modified = True
+
+    return jsonify({'mensaje': 'Agregado al carrito'})
+
+
+# ── CARRITO: OBTENER ─────────────────────────────────────────
+@app.route('/api/carrito')
+def carrito_ver():
+    carrito = session.get('carrito', [])
+
+    total = sum(item['precio'] * item['cantidad'] for item in carrito)
+
+    return jsonify({
+        'items': carrito,
+        'total': total
+    })
+
+
+# ── CARRITO: ELIMINAR ────────────────────────────────────────
+@app.route('/api/carrito/eliminar/<int:id>', methods=['DELETE'])
+def carrito_eliminar(id):
+    carrito = session.get('carrito', [])
+
+    carrito = [item for item in carrito if item['id'] != id]
+
+    session['carrito'] = carrito
+    session.modified = True
+
+    return jsonify({'mensaje': 'Eliminado'})
+
+
+# ── CARRITO: CONFIRMAR ───────────────────────────────────────
+@app.route('/api/carrito/confirmar', methods=['POST'])
+def carrito_confirmar():
+    if 'usuario_id' not in session:
+        return jsonify({'error': 'No autenticado'}), 401
+
+    carrito = session.get('carrito', [])
+
+    if not carrito:
+        return jsonify({'error': 'Carrito vacío'}), 400
+
+    data = request.json
+    notas = data.get('notas', '')
+
+    total = sum(item['precio'] * item['cantidad'] for item in carrito)
+
+    conn = get_db_connection()
+    cur = conn.cursor(row_factory=psycopg.rows.dict_row)
+
+    cur.execute("""
+        INSERT INTO pedidos (usuario_id, total, notas, estado)
+        VALUES (%s, %s, %s, 'pendiente')
+        RETURNING id
+    """, (session['usuario_id'], total, notas))
+
+    pedido_id = cur.fetchone()['id']
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    session['carrito'] = []
+    session.modified = True
+
+    return jsonify({
+        'mensaje': 'Pedido creado',
+        'pedido_id': pedido_id
+    })
+
+
+
+
+
 if __name__ == '__main__':
     app.run(debug=True)
+
+
