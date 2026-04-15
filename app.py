@@ -51,22 +51,16 @@ def admin_required(f):
 # ── HOME ─────────────────────────────────────────────────────
 @app.route('/')
 def index():
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor(row_factory=psycopg.rows.dict_row)
+    conn = get_db_connection()
+    cur = conn.cursor(row_factory=psycopg.rows.dict_row)
 
-        cur.execute("SELECT * FROM servicios WHERE activo = TRUE")
-        servicios = cur.fetchall()
+    cur.execute("SELECT * FROM servicios WHERE activo = TRUE")
+    servicios = cur.fetchall()
 
-        cur.close()
-        conn.close()
+    cur.close()
+    conn.close()
 
-        return str(servicios)
-
-    except Exception as e:
-        return f"ERROR REAL ❌ {repr(e)}"
-
-
+    return render_template('index.html', servicios=servicios)
 # ── LOGIN TEST DB (DEBUG OPCIONAL) ───────────────────────────
 @app.route('/ping-db')
 def ping_db():
@@ -82,7 +76,6 @@ def ping_db():
 
     except Exception as e:
         return f"DB ERROR ❌ {str(e)}"
-
 
 # ── PING ─────────────────────────────────────────────────────
 @app.route('/ping')
