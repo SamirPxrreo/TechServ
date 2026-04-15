@@ -29,6 +29,48 @@ def get_db_connection():
     )
 
 
+@app.route('/admin')
+@admin_required
+def admin():
+    conn = get_db_connection()
+    cur = conn.cursor(row_factory=psycopg.rows.dict_row)
+
+    cur.execute("SELECT COUNT(*) AS total FROM usuarios")
+    total_usuarios = cur.fetchone()['total']
+
+    cur.execute("SELECT COUNT(*) AS total FROM pedidos")
+    total_pedidos = cur.fetchone()['total']
+
+    cur.execute("""
+        SELECT COALESCE(SUM(total),0) AS ingresos
+        FROM pedidos
+        WHERE estado = 'completado'
+    """)
+    ingresos = cur.fetchone()['ingresos']
+
+    cur.execute("""
+        SELECT p.*, u.nombre, u.correo
+        FROM pedidos p
+        JOIN usuarios u ON p.usuario_id = u.id
+        ORDER BY p.id DESC
+    """)
+    pedidos = cur.fetchall()
+
+    cur.execute("SELECT * FROM usuarios ORDER BY id DESC")
+    usuarios = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return render_template(
+        'admin.html',
+        total_usuarios=total_usuarios,
+        total_pedidos=total_pedidos,
+        ingresos=ingresos,
+        pedidos=pedidos,
+        usuarios=usuarios
+    )
+
 # ── Decoradores ──────────────────────────────────────────────
 def login_required(f):
     @wraps(f)
@@ -129,7 +171,6 @@ def registro():
     })
 
 
-# ── LOGIN ────────────────────────────────────────────────────
 @app.route('/api/login', methods=['POST'])
 def login():
     data = request.json
@@ -153,7 +194,11 @@ def login():
     session['correo'] = usuario['correo']
     session['rol'] = usuario['rol']
 
-    return jsonify({'mensaje': f'Bienvenido {usuario["nombre"]}'})
+    return jsonify({
+        'mensaje': f'Bienvenido {usuario["nombre"]}',
+        'nombre': usuario['nombre'],
+        'rol': usuario['rol']
+    })
 
 
 # ── LOGOUT ───────────────────────────────────────────────────
@@ -222,7 +267,9 @@ def carrito_agregar():
         'servicio_id': servicio['id'],
         'nombre': servicio['nombre'],
         'precio': float(servicio['precio']),
-        'cantidad': 1
+        'cantidad': 1,
+        'icono': '🔧',
+        'subtotal': float(servicio['precio'])
     })
 
     session['carrito'] = carrito
@@ -236,7 +283,11 @@ def carrito_agregar():
 def carrito_ver():
     carrito = session.get('carrito', [])
 
-    total = sum(item['precio'] * item['cantidad'] for item in carrito)
+    total = 0
+
+    for item in carrito:
+        item['subtotal'] = item['precio'] * item['cantidad']
+        total += item['subtotal']
 
     return jsonify({
         'items': carrito,
