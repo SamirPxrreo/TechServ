@@ -29,7 +29,7 @@ def get_db_connection():
     )
 
 
-# ── DECORADORES ──────────────────────────────────────────────
+# ── DECORADORES ─────────────────────────
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -48,39 +48,54 @@ def admin_required(f):
     return decorated
 
 
-# ── HOME ─────────────────────────────────────────────────────
+# ── HOME (FIX AQUÍ) ─────────────────────
 @app.route('/')
 def index():
     conn = get_db_connection()
     cur = conn.cursor(row_factory=psycopg.rows.dict_row)
 
+    # servicios
     cur.execute("SELECT * FROM servicios WHERE activo = TRUE")
     servicios = cur.fetchall()
+
+    # 🔥 FIX: ingresos (para que no rompa el HTML)
+    cur.execute("""
+        SELECT COALESCE(SUM(total), 0) AS ingresos
+        FROM pedidos
+        WHERE estado = 'completado'
+    """)
+    ingresos = cur.fetchone()['ingresos']
 
     cur.close()
     conn.close()
 
-    return render_template('index.html', servicios=servicios)
+    return render_template(
+        'index.html',
+        servicios=servicios,
+        ingresos=ingresos   # 🔥 IMPORTANTE
+    )
 
 
-# ── ADMIN PANEL ──────────────────────────────────────────────
+# ── ADMIN PANEL ─────────────────────────
 @app.route('/admin')
 @admin_required
 def admin():
     conn = get_db_connection()
     cur = conn.cursor(row_factory=psycopg.rows.dict_row)
 
-    # stats
     cur.execute("SELECT COUNT(*) AS total FROM usuarios")
     total_usuarios = cur.fetchone()['total']
 
     cur.execute("SELECT COUNT(*) AS total FROM pedidos")
     total_pedidos = cur.fetchone()['total']
 
-    cur.execute("SELECT COALESCE(SUM(total),0) AS ingresos FROM pedidos WHERE estado='completado'")
+    cur.execute("""
+        SELECT COALESCE(SUM(total),0) AS ingresos
+        FROM pedidos
+        WHERE estado='completado'
+    """)
     ingresos = cur.fetchone()['ingresos']
 
-    # pedidos con datos del usuario
     cur.execute("""
         SELECT 
             p.id,
@@ -96,7 +111,6 @@ def admin():
     """)
     pedidos = cur.fetchall()
 
-    # usuarios
     cur.execute("SELECT * FROM usuarios ORDER BY id DESC LIMIT 20")
     usuarios = cur.fetchall()
 
@@ -112,7 +126,8 @@ def admin():
         usuarios=usuarios
     )
 
-#-----ENDPOINT PARA CAMBIAR ESTADO DEL PEDIDO-----
+
+# ── CAMBIAR ESTADO ──────────────────────
 @app.route('/api/admin/pedido/<int:id>', methods=['PUT'])
 @admin_required
 def actualizar_estado_pedido(id):
@@ -141,7 +156,8 @@ def actualizar_estado_pedido(id):
 
     return jsonify({'ok': True, 'estado': estado})
 
-# ------- ver detalle del pedido -------
+
+# ── DETALLE PEDIDO ──────────────────────
 @app.route('/api/admin/pedido/<int:id>')
 @admin_required
 def detalle_pedido(id):
@@ -154,7 +170,6 @@ def detalle_pedido(id):
         JOIN usuarios u ON p.usuario_id = u.id
         WHERE p.id = %s
     """, (id,))
-
     pedido = cur.fetchone()
 
     if not pedido:
@@ -167,7 +182,6 @@ def detalle_pedido(id):
         FROM pedido_items
         WHERE pedido_id = %s
     """, (id,))
-
     items = cur.fetchall()
 
     cur.close()
@@ -179,7 +193,7 @@ def detalle_pedido(id):
     })
 
 
-# ── DEBUG DB ────────────────────────────────────────────────
+# ── DEBUG ───────────────────────────────
 @app.route('/ping-db')
 def ping_db():
     try:
@@ -191,7 +205,6 @@ def ping_db():
         conn.close()
 
         return f"DB OK ✅ {data}"
-
     except Exception as e:
         return f"DB ERROR ❌ {str(e)}"
 
@@ -201,7 +214,7 @@ def ping():
     return "Flask está vivo ✅"
 
 
-# ── REGISTRO ────────────────────────────────────────────────
+# ── REGISTRO ───────────────────────────
 @app.route('/api/registro', methods=['POST'])
 def registro():
     data = request.json
@@ -247,7 +260,7 @@ def registro():
     })
 
 
-# ── LOGIN ────────────────────────────────────────────────
+# ── LOGIN ──────────────────────────────
 @app.route('/api/login', methods=['POST'])
 def login():
     data = request.json
@@ -280,169 +293,25 @@ def login():
     })
 
 
-# ── LOGOUT ────────────────────────────────────────────────
+# ── LOGOUT ─────────────────────────────
 @app.route('/api/logout', methods=['POST'])
 def logout():
     session.clear()
     return jsonify({'mensaje': 'Sesión cerrada'})
 
 
-# ── SESIÓN ────────────────────────────────────────────────
+# ── SESIÓN ─────────────────────────────
 @app.route('/api/sesion')
 def sesion():
     if 'usuario_id' in session:
         return jsonify({
             'autenticado': True,
-            'mensaje': f'Bienvenido {session["nombre"]}',
             'nombre': session["nombre"],
             'rol': session["rol"]
         })
-
     return jsonify({'autenticado': False})
 
 
-# ── CARRITO: AGREGAR ───────────────────────────────────────
-@app.route('/api/carrito/agregar', methods=['POST'])
-def carrito_agregar():
-    if 'usuario_id' not in session:
-        return jsonify({'error': 'No autenticado'}), 401
-
-    data = request.json
-    servicio_id = data.get('servicio_id')
-
-    if not servicio_id:
-        return jsonify({'error': 'Servicio inválido'}), 400
-
-    servicio_id = int(servicio_id)
-
-    if 'carrito' not in session:
-        session['carrito'] = []
-
-    carrito = session['carrito']
-
-    for item in carrito:
-        if item['servicio_id'] == servicio_id:
-            item['cantidad'] += 1
-            session['carrito'] = carrito
-            session.modified = True
-            return jsonify({'mensaje': 'Agregado'})
-
-    conn = get_db_connection()
-    cur = conn.cursor(row_factory=psycopg.rows.dict_row)
-
-    cur.execute("SELECT id, nombre, precio FROM servicios WHERE id = %s", (servicio_id,))
-    servicio = cur.fetchone()
-
-    cur.close()
-    conn.close()
-
-    if not servicio:
-        return jsonify({'error': 'Servicio no encontrado'}), 404
-
-    carrito.append({
-        'id': servicio['id'],
-        'servicio_id': servicio['id'],
-        'nombre': servicio['nombre'],
-        'precio': float(servicio['precio']),
-        'cantidad': 1,
-        'icono': '🔧',
-        'subtotal': float(servicio['precio'])
-    })
-
-    session['carrito'] = carrito
-    session.modified = True
-
-    return jsonify({'mensaje': 'Agregado al carrito'})
-
-
-# ── CARRITO: VER ───────────────────────────────────────────
-@app.route('/api/carrito')
-def carrito_ver():
-    carrito = session.get('carrito', [])
-
-    total = 0
-
-    for item in carrito:
-        precio = float(item.get('precio', 0))
-        cantidad = int(item.get('cantidad', 1))
-
-        item['precio'] = precio
-        item['cantidad'] = cantidad
-        item['subtotal'] = precio * cantidad
-
-        total += item['subtotal']
-
-    return jsonify({
-        'items': carrito,
-        'total': total
-    })
-
-
-# ── CARRITO: ELIMINAR ───────────────────────────────────────
-@app.route('/api/carrito/eliminar/<int:id>', methods=['DELETE'])
-def carrito_eliminar(id):
-    carrito = session.get('carrito', [])
-
-    carrito = [item for item in carrito if item['id'] != id]
-
-    session['carrito'] = carrito
-    session.modified = True
-
-    return jsonify({'mensaje': 'Eliminado'})
-
-
-# ── CARRITO: CONFIRMAR ──────────────────────────────────────
-@app.route('/api/carrito/confirmar', methods=['POST'])
-def carrito_confirmar():
-    if 'usuario_id' not in session:
-        return jsonify({'error': 'No autenticado'}), 401
-
-    carrito = session.get('carrito', [])
-
-    if not carrito:
-        return jsonify({'error': 'Carrito vacío'}), 400
-
-    data = request.json
-    notas = data.get('notas', '')
-
-    total = sum(item['precio'] * item['cantidad'] for item in carrito)
-
-    conn = get_db_connection()
-    cur = conn.cursor(row_factory=psycopg.rows.dict_row)
-
-    # 1. Crear pedido
-    cur.execute("""
-        INSERT INTO pedidos (usuario_id, total, notas, estado)
-        VALUES (%s, %s, %s, 'pendiente')
-        RETURNING id
-    """, (session['usuario_id'], total, notas))
-
-    pedido_id = cur.fetchone()['id']
-
-    # 2. 🔥 GUARDAR ITEMS
-    for item in carrito:
-        cur.execute("""
-            INSERT INTO pedido_items (pedido_id, nombre, precio, cantidad)
-            VALUES (%s, %s, %s, %s)
-        """, (
-            pedido_id,
-            item['nombre'],
-            item['precio'],
-            item['cantidad']
-        ))
-
-    conn.commit()
-    cur.close()
-    conn.close()
-
-    session['carrito'] = []
-    session.modified = True
-
-    return jsonify({
-        'mensaje': 'Pedido creado',
-        'pedido_id': pedido_id
-    })
-
-
+# ── RUN ────────────────────────────────
 if __name__ == '__main__':
     app.run(debug=True)
