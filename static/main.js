@@ -97,32 +97,42 @@ function verDetalle(id) {
     .then(res => res.json())
     .then(data => {
 
-      console.log("DEBUG PEDIDO:", data); // 🔥 para verificar
+      const p = data.pedido;
+      const items = data.items;
 
-      const p = data.pedido || {};
-      const items = data.items || [];
+      // 🔥 DEBUG (para confirmar en consola)
+      console.log("PEDIDO:", p);
 
-      // 🔥 MANEJO SEGURO DE NOTAS
-      let notaTexto = 'Sin nota';
+      // ✅ NOTA LIMPIA
+      const nota = p.notas && p.notas.trim() !== ""
+        ? p.notas
+        : '<span style="color:#999">Sin nota</span>';
 
-      if (p.notas && p.notas !== 'null' && p.notas.trim() !== '') {
-        notaTexto = p.notas;
-      }
-
-      // 🔥 INFO GENERAL
+      // 🔥 INFO
       document.getElementById('detalle-info').innerHTML = `
-        <p><strong>Cliente:</strong> ${p.nombre || '—'}</p>
-        <p><strong>Correo:</strong> ${p.correo || '—'}</p>
-        <p><strong>Total:</strong> $${Number(p.total || 0).toLocaleString('es-CO')}</p>
-        <p><strong>Estado:</strong> ${p.estado || '—'}</p>
-        <p><strong>Nota:</strong> <span style="color:#444">${notaTexto}</span></p>
+        <p><strong>Cliente:</strong> ${p.nombre}</p>
+        <p><strong>Correo:</strong> ${p.correo}</p>
+        <p><strong>Total:</strong> $${Number(p.total).toLocaleString('es-CO')}</p>
+        <p><strong>Estado:</strong> ${p.estado}</p>
+
+        <hr style="margin:10px 0">
+
+        <p><strong>📝 Nota del cliente:</strong></p>
+        <div style="
+          background:#f7f7f7;
+          padding:10px;
+          border-radius:8px;
+          font-size:13px;
+          color:#444;
+        ">
+          ${nota}
+        </div>
       `;
 
       // 🔥 ITEMS
-      if (!items.length) {
-        document.getElementById('detalle-items').innerHTML = `
-          <p style="color:#999">No hay items registrados</p>
-        `;
+      if (!items || items.length === 0) {
+        document.getElementById('detalle-items').innerHTML =
+          `<p style="color:#999">No hay items registrados</p>`;
       } else {
         document.getElementById('detalle-items').innerHTML = items.map(i => `
           <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
@@ -133,10 +143,6 @@ function verDetalle(id) {
       }
 
       document.getElementById('modal-detalle').style.display = 'flex';
-    })
-    .catch(err => {
-      console.error(err);
-      alert('Error cargando detalle');
     });
 }
 
