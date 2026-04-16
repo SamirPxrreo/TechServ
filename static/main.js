@@ -125,7 +125,9 @@ function verDetalle(id) {
           font-size:13px;
           color:#444;
         ">
-          ${nota}
+          ${p.notas && p.notas.trim() !== "" 
+            ? p.notas 
+            : '<span style="color:#999">Sin nota</span>'}
         </div>
       `;
 
