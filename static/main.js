@@ -97,20 +97,29 @@ function verDetalle(id) {
     .then(res => res.json())
     .then(data => {
 
-      const p = data.pedido;
-      const items = data.items;
+      console.log("DEBUG PEDIDO:", data); // 🔥 para verificar
 
-      // 🔥 INFO GENERAL + NOTA
+      const p = data.pedido || {};
+      const items = data.items || [];
+
+      // 🔥 MANEJO SEGURO DE NOTAS
+      let notaTexto = 'Sin nota';
+
+      if (p.notas && p.notas !== 'null' && p.notas.trim() !== '') {
+        notaTexto = p.notas;
+      }
+
+      // 🔥 INFO GENERAL
       document.getElementById('detalle-info').innerHTML = `
-        <p><strong>Cliente:</strong> ${p.nombre}</p>
-        <p><strong>Correo:</strong> ${p.correo}</p>
-        <p><strong>Total:</strong> $${Number(p.total).toLocaleString('es-CO')}</p>
-        <p><strong>Estado:</strong> ${p.estado}</p>
-        <p><strong>Nota:</strong> ${p.notas ? p.notas : '<span style="color:#999">Sin nota</span>'}</p>
+        <p><strong>Cliente:</strong> ${p.nombre || '—'}</p>
+        <p><strong>Correo:</strong> ${p.correo || '—'}</p>
+        <p><strong>Total:</strong> $${Number(p.total || 0).toLocaleString('es-CO')}</p>
+        <p><strong>Estado:</strong> ${p.estado || '—'}</p>
+        <p><strong>Nota:</strong> <span style="color:#444">${notaTexto}</span></p>
       `;
 
       // 🔥 ITEMS
-      if (!items || items.length === 0) {
+      if (!items.length) {
         document.getElementById('detalle-items').innerHTML = `
           <p style="color:#999">No hay items registrados</p>
         `;
@@ -124,6 +133,10 @@ function verDetalle(id) {
       }
 
       document.getElementById('modal-detalle').style.display = 'flex';
+    })
+    .catch(err => {
+      console.error(err);
+      alert('Error cargando detalle');
     });
 }
 
