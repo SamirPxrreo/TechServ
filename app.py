@@ -178,6 +178,7 @@ def detalle_pedido(id):
         'items': items
     })
 
+
 # ── DEBUG DB ────────────────────────────────────────────────
 @app.route('/ping-db')
 def ping_db():
