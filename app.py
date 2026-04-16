@@ -29,49 +29,7 @@ def get_db_connection():
     )
 
 
-@app.route('/admin')
-@admin_required
-def admin():
-    conn = get_db_connection()
-    cur = conn.cursor(row_factory=psycopg.rows.dict_row)
-
-    cur.execute("SELECT COUNT(*) AS total FROM usuarios")
-    total_usuarios = cur.fetchone()['total']
-
-    cur.execute("SELECT COUNT(*) AS total FROM pedidos")
-    total_pedidos = cur.fetchone()['total']
-
-    cur.execute("""
-        SELECT COALESCE(SUM(total),0) AS ingresos
-        FROM pedidos
-        WHERE estado = 'completado'
-    """)
-    ingresos = cur.fetchone()['ingresos']
-
-    cur.execute("""
-        SELECT p.*, u.nombre, u.correo
-        FROM pedidos p
-        JOIN usuarios u ON p.usuario_id = u.id
-        ORDER BY p.id DESC
-    """)
-    pedidos = cur.fetchall()
-
-    cur.execute("SELECT * FROM usuarios ORDER BY id DESC")
-    usuarios = cur.fetchall()
-
-    cur.close()
-    conn.close()
-
-    return render_template(
-        'admin.html',
-        total_usuarios=total_usuarios,
-        total_pedidos=total_pedidos,
-        ingresos=ingresos,
-        pedidos=pedidos,
-        usuarios=usuarios
-    )
-
-# ── Decoradores ──────────────────────────────────────────────
+# ── DECORADORES ──────────────────────────────────────────────
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -81,18 +39,12 @@ def login_required(f):
     return decorated
 
 
-# ── ADMIN REQUIRED ──────────────────────────────────────────
 def admin_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        if 'usuario_id' not in session:
+        if 'usuario_id' not in session or session.get('rol') != 'admin':
             return redirect('/')
-
-        if session.get('rol') != 'admin':
-            return redirect('/')
-
         return f(*args, **kwargs)
-
     return decorated
 
 
@@ -109,7 +61,44 @@ def index():
     conn.close()
 
     return render_template('index.html', servicios=servicios)
-# ── LOGIN TEST DB (DEBUG OPCIONAL) ───────────────────────────
+
+
+# ── ADMIN PANEL ──────────────────────────────────────────────
+@app.route('/admin')
+@admin_required
+def admin():
+    conn = get_db_connection()
+    cur = conn.cursor(row_factory=psycopg.rows.dict_row)
+
+    cur.execute("SELECT COUNT(*) AS total FROM usuarios")
+    total_usuarios = cur.fetchone()['total']
+
+    cur.execute("SELECT COUNT(*) AS total FROM pedidos")
+    total_pedidos = cur.fetchone()['total']
+
+    cur.execute("SELECT COALESCE(SUM(total),0) AS ingresos FROM pedidos WHERE estado='completado'")
+    ingresos = cur.fetchone()['ingresos']
+
+    cur.execute("SELECT * FROM pedidos ORDER BY id DESC LIMIT 20")
+    pedidos = cur.fetchall()
+
+    cur.execute("SELECT * FROM usuarios ORDER BY id DESC LIMIT 20")
+    usuarios = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return render_template(
+        'admin.html',
+        total_usuarios=total_usuarios,
+        total_pedidos=total_pedidos,
+        ingresos=ingresos,
+        pedidos=pedidos,
+        usuarios=usuarios
+    )
+
+
+# ── DEBUG DB ────────────────────────────────────────────────
 @app.route('/ping-db')
 def ping_db():
     try:
@@ -125,7 +114,7 @@ def ping_db():
     except Exception as e:
         return f"DB ERROR ❌ {str(e)}"
 
-# ── PING ─────────────────────────────────────────────────────
+
 @app.route('/ping')
 def ping():
     return "Flask está vivo ✅"
@@ -177,6 +166,7 @@ def registro():
     })
 
 
+# ── LOGIN ────────────────────────────────────────────────
 @app.route('/api/login', methods=['POST'])
 def login():
     data = request.json
@@ -195,26 +185,28 @@ def login():
     if not usuario or not check_password_hash(usuario['contrasena'], contrasena):
         return jsonify({'error': 'Credenciales incorrectas'}), 401
 
+    rol = usuario['rol'].lower() if usuario.get('rol') else 'usuario'
+
     session['usuario_id'] = usuario['id']
     session['nombre'] = usuario['nombre']
     session['correo'] = usuario['correo']
-    session['rol'] = usuario['rol']
+    session['rol'] = rol
 
     return jsonify({
         'mensaje': f'Bienvenido {usuario["nombre"]}',
-        'nombre': usuario['nombre'],
-        'rol': usuario['rol']
+        'nombre': usuario["nombre"],
+        'rol': rol
     })
 
 
-# ── LOGOUT ───────────────────────────────────────────────────
+# ── LOGOUT ────────────────────────────────────────────────
 @app.route('/api/logout', methods=['POST'])
 def logout():
     session.clear()
     return jsonify({'mensaje': 'Sesión cerrada'})
 
 
-# ── SESIÓN ───────────────────────────────────────────────────
+# ── SESIÓN ────────────────────────────────────────────────
 @app.route('/api/sesion')
 def sesion():
     if 'usuario_id' in session:
@@ -225,12 +217,10 @@ def sesion():
             'rol': session["rol"]
         })
 
-    return jsonify({
-        'autenticado': False
-    })
+    return jsonify({'autenticado': False})
 
 
-# ── CARRITO: AGREGAR ─────────────────────────────────────────
+# ── CARRITO: AGREGAR ───────────────────────────────────────
 @app.route('/api/carrito/agregar', methods=['POST'])
 def carrito_agregar():
     if 'usuario_id' not in session:
@@ -242,12 +232,13 @@ def carrito_agregar():
     if not servicio_id:
         return jsonify({'error': 'Servicio inválido'}), 400
 
+    servicio_id = int(servicio_id)
+
     if 'carrito' not in session:
         session['carrito'] = []
 
     carrito = session['carrito']
 
-    # verificar si ya existe
     for item in carrito:
         if item['servicio_id'] == servicio_id:
             item['cantidad'] += 1
@@ -255,7 +246,6 @@ def carrito_agregar():
             session.modified = True
             return jsonify({'mensaje': 'Agregado'})
 
-    # traer info del servicio
     conn = get_db_connection()
     cur = conn.cursor(row_factory=psycopg.rows.dict_row)
 
@@ -284,7 +274,7 @@ def carrito_agregar():
     return jsonify({'mensaje': 'Agregado al carrito'})
 
 
-# ── CARRITO: OBTENER ─────────────────────────────────────────
+# ── CARRITO: VER ───────────────────────────────────────────
 @app.route('/api/carrito')
 def carrito_ver():
     carrito = session.get('carrito', [])
@@ -292,7 +282,13 @@ def carrito_ver():
     total = 0
 
     for item in carrito:
-        item['subtotal'] = item['precio'] * item['cantidad']
+        precio = float(item.get('precio', 0))
+        cantidad = int(item.get('cantidad', 1))
+
+        item['precio'] = precio
+        item['cantidad'] = cantidad
+        item['subtotal'] = precio * cantidad
+
         total += item['subtotal']
 
     return jsonify({
@@ -301,7 +297,7 @@ def carrito_ver():
     })
 
 
-# ── CARRITO: ELIMINAR ────────────────────────────────────────
+# ── CARRITO: ELIMINAR ───────────────────────────────────────
 @app.route('/api/carrito/eliminar/<int:id>', methods=['DELETE'])
 def carrito_eliminar(id):
     carrito = session.get('carrito', [])
@@ -314,7 +310,7 @@ def carrito_eliminar(id):
     return jsonify({'mensaje': 'Eliminado'})
 
 
-# ── CARRITO: CONFIRMAR ───────────────────────────────────────
+# ── CARRITO: CONFIRMAR ──────────────────────────────────────
 @app.route('/api/carrito/confirmar', methods=['POST'])
 def carrito_confirmar():
     if 'usuario_id' not in session:
@@ -354,10 +350,5 @@ def carrito_confirmar():
     })
 
 
-
-
-
 if __name__ == '__main__':
     app.run(debug=True)
-
-
