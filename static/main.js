@@ -3,9 +3,6 @@
 // ═══════════════════════════════════════
 
 // ── LOADER ─────────────────────────────
-console.log("NOTAS:", p.notas);
-console.log("NOTAS ALT:", p["notas"]);
-
 window.addEventListener('load', () => {
   const loader = document.getElementById('loader');
   if (loader) loader.style.display = 'none';
