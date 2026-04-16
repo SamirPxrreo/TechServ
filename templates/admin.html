@@ -79,7 +79,8 @@
             <td>${{ "{:,.0f}".format(p.total) }}</td>
 
             <td>
-              <select onchange="cambiarEstado({{ p.id }}, this)">
+                <select class="estado-select estado-{{ p.estado|replace(' ', '-') }}"
+                        onchange="cambiarEstado({{ p.id }}, this)">
                 <option value="pendiente" {% if p.estado == 'pendiente' %}selected{% endif %}>Pendiente</option>
                 <option value="en proceso" {% if p.estado == 'en proceso' %}selected{% endif %}>En Proceso</option>
                 <option value="completado" {% if p.estado == 'completado' %}selected{% endif %}>Completado</option>
@@ -90,7 +91,9 @@
             <td>{{ p.fecha }}</td>
 
             <td>
-              <button onclick="verDetalle({{ p.id }})">Ver detalle</button>
+            <button class="btn-detalle" onclick="verDetalle({{ p.id }})">
+              Ver detalle
+            </button>
             </td>
           </tr>
           {% endfor %}
@@ -154,7 +157,9 @@
     <h3>Items</h3>
     <div id="detalle-items"></div>
 
-    <button onclick="cerrarDetalle()">Cerrar</button>
+    <button class="btn-cerrar" onclick="cerrarDetalle()">
+      Cerrar
+    </button>
   </div>
 </div>
 
@@ -175,6 +180,8 @@ function cambiarEstado(pedidoId, select) {
     if (data.error) {
       alert('❌ Error: ' + data.error);
     } else {
+      select.className = "estado-select estado-" + nuevoEstado.replace(" ", "-");
+
       select.style.border = "2px solid #00c853";
       setTimeout(() => select.style.border = "", 1000);
     }
@@ -215,9 +222,12 @@ function verDetalle(id) {
     });
 }
 
+
 function cerrarDetalle() {
   document.getElementById('modal-detalle').style.display = 'none';
 }
+</script>
+
 </script>
 
 </body>
