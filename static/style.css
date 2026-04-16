@@ -872,3 +872,21 @@ body {
   background: var(--gray-500);
   color: white;
 }
+
+/* ── BOTÓN VER DETALLE ── */
+.btn-detalle {
+  background: var(--blue);
+  color: var(--white);
+  border: none;
+  padding: 7px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-detalle:hover {
+  opacity: 0.85;
+  transform: scale(1.03);
+}
