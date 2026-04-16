@@ -126,15 +126,20 @@ def actualizar_estado_pedido(id):
     cur = conn.cursor()
 
     cur.execute(
-        "UPDATE pedidos SET estado = %s WHERE id = %s",
+        "UPDATE pedidos SET estado = %s WHERE id = %s RETURNING id",
         (estado, id)
     )
+
+    updated = cur.fetchone()
 
     conn.commit()
     cur.close()
     conn.close()
 
-    return jsonify({'ok': True})
+    if not updated:
+        return jsonify({'error': 'Pedido no encontrado'}), 404
+
+    return jsonify({'ok': True, 'estado': estado})
 
 # ------- ver detalle del pedido -------
 @app.route('/api/admin/pedido/<int:id>')
@@ -151,6 +156,11 @@ def detalle_pedido(id):
         WHERE p.id = %s
     """, (id,))
     pedido = cur.fetchone()
+    
+    if not pedido:
+        cur.close()
+        conn.close()
+        return jsonify({'error': 'Pedido no encontrado'}), 404
 
     # items (si no tienes tabla items, luego la hacemos pro)
     cur.execute("""
@@ -399,6 +409,7 @@ def carrito_confirmar():
     conn = get_db_connection()
     cur = conn.cursor(row_factory=psycopg.rows.dict_row)
 
+    # 1. Crear pedido
     cur.execute("""
         INSERT INTO pedidos (usuario_id, total, notas, estado)
         VALUES (%s, %s, %s, 'pendiente')
@@ -406,6 +417,18 @@ def carrito_confirmar():
     """, (session['usuario_id'], total, notas))
 
     pedido_id = cur.fetchone()['id']
+
+    # 2. 🔥 GUARDAR ITEMS
+    for item in carrito:
+        cur.execute("""
+            INSERT INTO pedido_items (pedido_id, nombre, precio, cantidad)
+            VALUES (%s, %s, %s, %s)
+        """, (
+            pedido_id,
+            item['nombre'],
+            item['precio'],
+            item['cantidad']
+        ))
 
     conn.commit()
     cur.close()
