@@ -104,28 +104,32 @@ function verDetalle(id) {
       console.log("PEDIDO:", p);
 
       // ✅ NOTA LIMPIA
-const nota = p["notas"] && p["notas"].trim() !== ""
-  ? p["notas"]
-  : '<span style="color:#999">Sin nota</span>';
+      const nota = p.notas && p.notas.trim() !== ""
+        ? p.notas
+        : '<span style="color:#999">Sin nota</span>';
 
-document.getElementById('detalle-info').innerHTML = `
-  <p><strong>Cliente:</strong> ${p.nombre}</p>
-  <p><strong>Correo:</strong> ${p.correo}</p>
-  <p><strong>Total:</strong> $${Number(p.total).toLocaleString('es-CO')}</p>
-  <p><strong>Estado:</strong> ${p.estado}</p>
+      // 🔥 INFO
+      document.getElementById('detalle-info').innerHTML = `
+        <p><strong>Cliente:</strong> ${p.nombre}</p>
+        <p><strong>Correo:</strong> ${p.correo}</p>
+        <p><strong>Total:</strong> $${Number(p.total).toLocaleString('es-CO')}</p>
+        <p><strong>Estado:</strong> ${p.estado}</p>
 
-  <hr style="margin:10px 0">
+        <hr style="margin:10px 0">
 
-  <p><strong>📝 Nota del cliente:</strong></p>
-  <div style="
-    background:#f7f7f7;
-    padding:10px;
-    border-radius:8px;
-  ">
-    ${nota}
-  </div>
-`;
-      
+        <p><strong>📝 Nota del cliente:</strong></p>
+        <div style="
+          background:#f7f7f7;
+          padding:10px;
+          border-radius:8px;
+          font-size:13px;
+          color:#444;
+        ">
+          ${p.notas && p.notas.trim() !== "" 
+            ? p.notas 
+            : '<span style="color:#999">Sin nota</span>'}
+        </div>
+      `;
 
       // 🔥 ITEMS
       if (!items || items.length === 0) {
