@@ -148,26 +148,26 @@ def detalle_pedido(id):
     conn = get_db_connection()
     cur = conn.cursor(row_factory=psycopg.rows.dict_row)
 
-    # pedido
     cur.execute("""
         SELECT p.*, u.nombre, u.correo
         FROM pedidos p
         JOIN usuarios u ON p.usuario_id = u.id
         WHERE p.id = %s
     """, (id,))
+
     pedido = cur.fetchone()
-    
+
     if not pedido:
         cur.close()
         conn.close()
         return jsonify({'error': 'Pedido no encontrado'}), 404
 
-    # items (si no tienes tabla items, luego la hacemos pro)
     cur.execute("""
         SELECT nombre, precio, cantidad
         FROM pedido_items
         WHERE pedido_id = %s
     """, (id,))
+
     items = cur.fetchall()
 
     cur.close()
