@@ -70,6 +70,7 @@ def admin():
     conn = get_db_connection()
     cur = conn.cursor(row_factory=psycopg.rows.dict_row)
 
+    # stats
     cur.execute("SELECT COUNT(*) AS total FROM usuarios")
     total_usuarios = cur.fetchone()['total']
 
@@ -79,9 +80,23 @@ def admin():
     cur.execute("SELECT COALESCE(SUM(total),0) AS ingresos FROM pedidos WHERE estado='completado'")
     ingresos = cur.fetchone()['ingresos']
 
-    cur.execute("SELECT * FROM pedidos ORDER BY id DESC LIMIT 20")
+    # pedidos con datos del usuario
+    cur.execute("""
+        SELECT 
+            p.id,
+            p.total,
+            p.estado,
+            p.fecha,
+            u.nombre,
+            u.correo
+        FROM pedidos p
+        JOIN usuarios u ON p.usuario_id = u.id
+        ORDER BY p.id DESC
+        LIMIT 20
+    """)
     pedidos = cur.fetchall()
 
+    # usuarios
     cur.execute("SELECT * FROM usuarios ORDER BY id DESC LIMIT 20")
     usuarios = cur.fetchall()
 
@@ -97,6 +112,61 @@ def admin():
         usuarios=usuarios
     )
 
+#-----ENDPOINT PARA CAMBIAR ESTADO DEL PEDIDO-----
+@app.route('/api/admin/pedido/<int:id>', methods=['PUT'])
+@admin_required
+def actualizar_estado_pedido(id):
+    data = request.json
+    estado = data.get('estado')
+
+    if estado not in ['pendiente', 'en proceso', 'completado', 'cancelado']:
+        return jsonify({'error': 'Estado inválido'}), 400
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cur.execute(
+        "UPDATE pedidos SET estado = %s WHERE id = %s",
+        (estado, id)
+    )
+
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    return jsonify({'ok': True})
+
+# ------- ver detalle del pedido -------
+@app.route('/api/admin/pedido/<int:id>')
+@admin_required
+def detalle_pedido(id):
+    conn = get_db_connection()
+    cur = conn.cursor(row_factory=psycopg.rows.dict_row)
+
+    # pedido
+    cur.execute("""
+        SELECT p.*, u.nombre, u.correo
+        FROM pedidos p
+        JOIN usuarios u ON p.usuario_id = u.id
+        WHERE p.id = %s
+    """, (id,))
+    pedido = cur.fetchone()
+
+    # items (si no tienes tabla items, luego la hacemos pro)
+    cur.execute("""
+        SELECT nombre, precio, cantidad
+        FROM pedido_items
+        WHERE pedido_id = %s
+    """, (id,))
+    items = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return jsonify({
+        'pedido': pedido,
+        'items': items
+    })
 
 # ── DEBUG DB ────────────────────────────────────────────────
 @app.route('/ping-db')
