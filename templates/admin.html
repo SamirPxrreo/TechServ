@@ -3,217 +3,214 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TechServ - Panel Administrador</title>
+<title>TechServ - Admin</title>
 
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+<style>
+/* BOTÓN DETALLE */
+.btn-detalle {
+  background: #111;
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: 0.2s;
+}
+
+.btn-detalle:hover {
+  background: #333;
+}
+
+/* BOTÓN CERRAR */
+.btn-cerrar {
+  margin-top: 15px;
+  width: 100%;
+  background: #ff5252;
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* ESTADOS */
+.estado-select {
+  padding: 5px;
+  border-radius: 6px;
+}
+
+.estado-pendiente { background: #fff3cd; }
+.estado-en-proceso { background: #cce5ff; }
+.estado-completado { background: #d4edda; }
+.estado-cancelado { background: #f8d7da; }
+
+/* MODAL */
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-box {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  width: 420px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.nota-box {
+  background: #f5f5f5;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-top: 5px;
+}
+</style>
+
 </head>
+<body>
 
-<body class="admin-body">
+<h1>Panel Admin</h1>
 
-<!-- NAV -->
-<div class="admin-nav">
-  <div class="logo">⬡ TechServ <span class="admin-badge">Admin</span></div>
+<!-- PEDIDOS -->
+<h2>Pedidos</h2>
 
-  <div class="admin-nav-right">
-    <a href="/" class="admin-back">← Volver al sitio</a>
-    <button class="logout-btn" onclick="fetch('/api/logout',{method:'POST'}).then(()=>location.href='/')">
-      Salir
+<table border="1" cellpadding="8">
+<thead>
+<tr>
+  <th>#</th>
+  <th>Cliente</th>
+  <th>Correo</th>
+  <th>Total</th>
+  <th>Estado</th>
+  <th>Acción</th>
+</tr>
+</thead>
+
+<tbody>
+{% for p in pedidos %}
+<tr>
+  <td>{{ p.id }}</td>
+  <td>{{ p.nombre }}</td>
+  <td>{{ p.correo }}</td>
+  <td>${{ "{:,.0f}".format(p.total) }}</td>
+
+  <td>
+    <select class="estado-select estado-{{ p.estado|replace(' ', '-') }}"
+            onchange="cambiarEstado({{ p.id }}, this)">
+      <option value="pendiente" {% if p.estado=='pendiente' %}selected{% endif %}>Pendiente</option>
+      <option value="en proceso" {% if p.estado=='en proceso' %}selected{% endif %}>En proceso</option>
+      <option value="completado" {% if p.estado=='completado' %}selected{% endif %}>Completado</option>
+      <option value="cancelado" {% if p.estado=='cancelado' %}selected{% endif %}>Cancelado</option>
+    </select>
+  </td>
+
+  <td>
+    <button class="btn-detalle" onclick="verDetalle({{ p.id }})">
+      Ver detalle
     </button>
-  </div>
-</div>
+  </td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
 
-<div class="admin-container">
 
-  <!-- STATS -->
-  <div class="admin-stats">
-    <div class="stat-card blue">
-      <div class="sc-icon">👥</div>
-      <div class="sc-info">
-        <strong>{{ total_usuarios }}</strong>
-        <span>Usuarios registrados</span>
-      </div>
-    </div>
+<!-- USUARIOS -->
+<h2>Usuarios</h2>
 
-    <div class="stat-card green">
-      <div class="sc-icon">📋</div>
-      <div class="sc-info">
-        <strong>{{ total_pedidos }}</strong>
-        <span>Pedidos totales</span>
-      </div>
-    </div>
+<table border="1" cellpadding="8">
+<thead>
+<tr>
+  <th>#</th>
+  <th>Nombre</th>
+  <th>Correo</th>
+</tr>
+</thead>
 
-    <div class="stat-card orange">
-      <div class="sc-icon">💰</div>
-      <div class="sc-info">
-        <strong>${{ "{:,.0f}".format(ingresos) }}</strong>
-        <span>Ingresos completados</span>
-      </div>
-    </div>
-  </div>
+<tbody>
+{% for u in usuarios %}
+<tr>
+  <td>{{ u.id }}</td>
+  <td>{{ u.nombre }}</td>
+  <td>{{ u.correo }}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
 
-  <!-- PEDIDOS -->
-  <div class="admin-section">
-    <h2>Pedidos Recientes</h2>
 
-    <div class="table-wrap">
-      <table class="admin-table">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Cliente</th>
-            <th>Correo</th>
-            <th>Total</th>
-            <th>Estado</th>
-            <th>Fecha</th>
-            <th>Acción</th>
-          </tr>
-        </thead>
+<!-- MODAL -->
+<div id="modal-detalle" class="modal">
+  <div class="modal-box">
 
-        <tbody>
-          {% for p in pedidos %}
-          <tr>
-            <td>#{{ p.id }}</td>
-            <td>{{ p.nombre }}</td>
-            <td>{{ p.correo }}</td>
-            <td>${{ "{:,.0f}".format(p.total) }}</td>
-
-            <td>
-              <select onchange="cambiarEstado({{ p.id }}, this)">
-                <option value="pendiente" {% if p.estado == 'pendiente' %}selected{% endif %}>Pendiente</option>
-                <option value="en proceso" {% if p.estado == 'en proceso' %}selected{% endif %}>En Proceso</option>
-                <option value="completado" {% if p.estado == 'completado' %}selected{% endif %}>Completado</option>
-                <option value="cancelado" {% if p.estado == 'cancelado' %}selected{% endif %}>Cancelado</option>
-              </select>
-            </td>
-
-            <td>{{ p.fecha }}</td>
-
-            <td>
-              <button onclick="verDetalle({{ p.id }})">Ver detalle</button>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- USUARIOS -->
-  <div class="admin-section">
-    <h2>Usuarios Registrados</h2>
-
-    <div class="table-wrap">
-      <table class="admin-table">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Nombre</th>
-            <th>Teléfono</th>
-            <th>Correo</th>
-            <th>Rol</th>
-            <th>Registro</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {% for u in usuarios %}
-          <tr>
-            <td>{{ u.id }}</td>
-            <td>{{ u.nombre }}</td>
-            <td>{{ u.telefono }}</td>
-            <td>{{ u.correo }}</td>
-            <td>
-              <span class="rol-badge rol-{{ u.rol }}">{{ u.rol }}</span>
-            </td>
-            <td>{{ u.fecha_registro.strftime('%d/%m/%Y') if u.fecha_registro else '' }}</td>
-          </tr>
-          {% else %}
-          <tr>
-            <td colspan="6" style="text-align:center;color:#999">No hay usuarios</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-</div>
-
-<!-- MODAL DETALLE -->
-<div id="modal-detalle"
-     style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6);
-            align-items:center; justify-content:center;">
-
-  <div style="background:#fff; padding:20px; border-radius:10px; width:400px;">
-
-    <h2>Detalle del Pedido</h2>
+    <h2>Detalle del pedido</h2>
 
     <div id="detalle-info"></div>
 
     <h3>Items</h3>
     <div id="detalle-items"></div>
 
-    <button onclick="cerrarDetalle()">Cerrar</button>
+    <button class="btn-cerrar" onclick="cerrarDetalle()">Cerrar</button>
   </div>
 </div>
 
+
 <!-- JS -->
 <script>
-function cambiarEstado(pedidoId, select) {
-  const nuevoEstado = select.value;
-
-  fetch(`/api/admin/pedido/${pedidoId}`, {
+function cambiarEstado(id, select) {
+  fetch(`/api/admin/pedido/${id}`, {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ estado: nuevoEstado })
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ estado: select.value })
   })
-  .then(res => res.json())
-  .then(data => {
-    if (data.error) {
-      alert('❌ Error: ' + data.error);
-    } else {
-      select.style.border = "2px solid #00c853";
-      setTimeout(() => select.style.border = "", 1000);
-    }
-  })
-  .catch(() => alert('Error de conexión'));
+  .then(() => {
+    select.className = "estado-select estado-" + select.value.replace(" ", "-");
+  });
 }
 
 
 function verDetalle(id) {
   fetch(`/api/admin/pedido/${id}`)
-    .then(res => res.json())
+    .then(r => r.json())
     .then(data => {
 
       const p = data.pedido;
-      const items = data.items;
 
       document.getElementById('detalle-info').innerHTML = `
-        <p><strong>Cliente:</strong> ${p.nombre}</p>
-        <p><strong>Correo:</strong> ${p.correo}</p>
-        <p><strong>Total:</strong> $${Number(p.total).toLocaleString('es-CO')}</p>
-        <p><strong>Estado:</strong> ${p.estado}</p>
+        <p><b>Cliente:</b> ${p.nombre}</p>
+        <p><b>Correo:</b> ${p.correo}</p>
+        <p><b>Total:</b> $${Number(p.total).toLocaleString('es-CO')}</p>
+        <p><b>Estado:</b> ${p.estado}</p>
+
+        <hr>
+
+        <p><b>📝 Nota del cliente:</b></p>
+        <div class="nota-box">
+          ${p.notas && p.notas.trim() !== "" ? p.notas : 'Sin nota'}
+        </div>
       `;
 
-      if (!items || items.length === 0) {
-        document.getElementById('detalle-items').innerHTML = `
-          <p style="color:#999">No hay items registrados</p>
-        `;
-      } else {
-        document.getElementById('detalle-items').innerHTML = items.map(i => `
-          <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+      document.getElementById('detalle-items').innerHTML =
+        data.items.map(i => `
+          <div style="display:flex; justify-content:space-between;">
             <span>${i.nombre}</span>
             <span>$${Number(i.precio).toLocaleString()} x ${i.cantidad}</span>
           </div>
         `).join('');
-      }
 
       document.getElementById('modal-detalle').style.display = 'flex';
     });
 }
+
 
 function cerrarDetalle() {
   document.getElementById('modal-detalle').style.display = 'none';
