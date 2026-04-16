@@ -49,12 +49,17 @@ def index():
     cur.execute("SELECT * FROM servicios WHERE activo = TRUE")
     servicios = cur.fetchall()
 
+    # 🔥 AGREGA ESTO
+    cur.execute("SELECT COALESCE(SUM(total),0) AS ingresos FROM pedidos WHERE estado='completado'")
+    ingresos = cur.fetchone()['ingresos']
+
     cur.close()
     conn.close()
 
     return render_template(
         'index.html',
-        servicios=servicios
+        servicios=servicios,
+        ingresos=ingresos  # 🔥 IMPORTANTE
     )
 
 
