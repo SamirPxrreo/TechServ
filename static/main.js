@@ -1,178 +1,130 @@
 // ═══════════════════════════════════════
-//  TECHSERV — main.js (ESTABLE)
+//  TECHSERV — main.js FINAL LIMPIO
 // ═══════════════════════════════════════
 
-// ── LOADER ─────────────────────────────
-window.addEventListener('load', () => {
-  const loader = document.getElementById('loader');
-  if (loader) loader.style.display = 'none';
-});
-
-// ── NAV SCROLL ─────────────────────────
-window.addEventListener('scroll', () => {
-  const nav = document.querySelector('.nav');
-  if (!nav) return;
-
-  if (window.scrollY > 50) {
-    nav.classList.add('nav-scrolled');
-  } else {
-    nav.classList.remove('nav-scrolled');
-  }
-});
 
 // ── INIT ───────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  if (typeof verificarSesion === "function") verificarSesion();
-  activarAnimaciones();
+  verificarSesion();
 });
+
 
 // ── SESIÓN ─────────────────────────────
 function verificarSesion() {
   fetch('/api/sesion')
     .then(r => r.json())
     .then(data => {
-      if (data.autenticado) {
-        mostrarUsuario(data.nombre, data.rol);
-        cargarConteoCarrito && cargarConteoCarrito();
+      if (!data.autenticado) return;
+
+      const user = document.getElementById('nav-user');
+      const guest = document.getElementById('nav-guest');
+
+      if (user && guest) {
+        guest.style.display = 'none';
+        user.style.display = 'flex';
       }
-    })
-    .catch(() => {});
+
+      if (data.rol === 'admin') {
+        const adminLink = document.getElementById('nav-admin-link');
+        if (adminLink) adminLink.style.display = 'inline-block';
+      }
+    });
 }
 
-function mostrarUsuario(nombre, rol) {
-  const guest = document.getElementById('nav-guest');
-  const user = document.getElementById('nav-user');
-
-  if (!guest || !user) return;
-
-  guest.style.display = 'none';
-  user.style.display = 'flex';
-
-  const bienvenida = document.getElementById('nav-bienvenida');
-  if (bienvenida) {
-    bienvenida.textContent = `Hola, ${nombre || 'Usuario'}`;
-  }
-
-  const adminLink = document.getElementById('nav-admin-link');
-  if (rol === 'admin' && adminLink) {
-    adminLink.style.display = 'inline-block';
-  }
-}
 
 // ── ADMIN: CAMBIAR ESTADO ──────────────
-function cambiarEstado(pedidoId, select) {
-  const nuevoEstado = select.value;
-
-  fetch(`/api/admin/pedido/${pedidoId}`, {
+function cambiarEstado(id, select) {
+  fetch(`/api/admin/pedido/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ estado: nuevoEstado })
+    body: JSON.stringify({ estado: select.value })
   })
   .then(res => res.json())
-  .then(data => {
-    if (data.error) {
-      alert('❌ ' + data.error);
-      return;
-    }
-
-    select.className = "estado-select estado-" + nuevoEstado.replace(" ", "-");
-
-    select.style.border = "2px solid #00c853";
-    setTimeout(() => select.style.border = "", 1000);
+  .then(() => {
+    select.className = "estado-select estado-" + select.value.replace(" ", "-");
   })
-  .catch(() => alert('Error de conexión'));
+  .catch(() => alert('Error cambiando estado'));
 }
+
 
 // ── ADMIN: VER DETALLE ─────────────────
 function verDetalle(id) {
   fetch(`/api/admin/pedido/${id}`)
-    .then(res => res.json())
+    .then(r => r.json())
     .then(data => {
 
       const p = data.pedido;
-      const items = data.items;
 
-      if (!p) {
-        alert("❌ No se pudo cargar el pedido");
-        return;
-      }
+      // INFO + NOTA
+      document.getElementById('detalle-info').innerHTML = `
+        <p><b>Cliente:</b> ${p.nombre}</p>
+        <p><b>Correo:</b> ${p.correo}</p>
+        <p><b>Total:</b> $${Number(p.total).toLocaleString('es-CO')}</p>
+        <p><b>Estado:</b> ${p.estado}</p>
 
-      // ✅ NOTA SEGURA
-      let notaHTML = '<span style="color:#999">Sin nota</span>';
-      if (p.notas && p.notas.trim() !== "") {
-        notaHTML = p.notas;
-      }
+        <hr>
 
-      const detalleInfo = document.getElementById('detalle-info');
-      const detalleItems = document.getElementById('detalle-items');
-
-      if (!detalleInfo || !detalleItems) return;
-
-      // 🔥 INFO
-      detalleInfo.innerHTML = `
-        <p><strong>Cliente:</strong> ${p.nombre}</p>
-        <p><strong>Correo:</strong> ${p.correo}</p>
-        <p><strong>Total:</strong> $${Number(p.total).toLocaleString('es-CO')}</p>
-        <p><strong>Estado:</strong> ${p.estado}</p>
-
-        <hr style="margin:10px 0">
-
-        <p><strong>📝 Nota del cliente:</strong></p>
-        <div style="
-          background:#f7f7f7;
-          padding:10px;
-          border-radius:8px;
-          font-size:13px;
-          color:#444;
-        ">
-          ${notaHTML}
+        <p><b>📝 Nota del cliente:</b></p>
+        <div class="nota-box">
+          ${p.notas && p.notas.trim() !== "" ? p.notas : 'Sin nota'}
         </div>
       `;
 
-      // 🔥 ITEMS
-      if (!items || items.length === 0) {
-        detalleItems.innerHTML =
-          `<p style="color:#999">No hay items registrados</p>`;
+      // ITEMS
+      if (!data.items || data.items.length === 0) {
+        document.getElementById('detalle-items').innerHTML =
+          `<p style="color:#999">No hay items</p>`;
       } else {
-        detalleItems.innerHTML = items.map(i => `
-          <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
-            <span>${i.nombre}</span>
-            <span>$${Number(i.precio).toLocaleString('es-CO')} x ${i.cantidad}</span>
-          </div>
-        `).join('');
+        document.getElementById('detalle-items').innerHTML =
+          data.items.map(i => `
+            <div style="display:flex; justify-content:space-between;">
+              <span>${i.nombre}</span>
+              <span>$${Number(i.precio).toLocaleString('es-CO')} x ${i.cantidad}</span>
+            </div>
+          `).join('');
       }
 
-      const modal = document.getElementById('modal-detalle');
-      if (modal) modal.style.display = 'flex';
+      document.getElementById('modal-detalle').style.display = 'flex';
     })
-    .catch(() => alert("Error cargando detalle"));
+    .catch(() => alert('Error cargando detalle'));
 }
 
-// ── ADMIN: CERRAR DETALLE ──────────────
+
+// ── ADMIN: CERRAR MODAL ────────────────
 function cerrarDetalle() {
-  const modal = document.getElementById('modal-detalle');
-  if (modal) modal.style.display = 'none';
+  document.getElementById('modal-detalle').style.display = 'none';
 }
 
-// ── UTIL ───────────────────────────────
-function mostrarToast(msg) {
-  const toast = document.getElementById('toast');
-  if (!toast) return;
 
-  toast.textContent = msg;
-  toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), 3000);
+// ── LOGOUT ─────────────────────────────
+function cerrarSesion() {
+  fetch('/api/logout', { method: 'POST' })
+    .then(() => location.href = '/');
 }
 
-// ── ANIMACIONES ────────────────────────
-function activarAnimaciones() {
-  const observer = new IntersectionObserver(entries => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        entry.target.classList.add('show');
-      }
-    });
-  }, { threshold: 0.2 });
 
-  document.querySelectorAll('.anim').forEach(el => observer.observe(el));
+// ── CARRITO ────────────────────────────
+function agregarAlCarrito(id) {
+  fetch('/api/carrito/agregar', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ servicio_id: id })
+  })
+  .then(() => alert('Agregado al carrito'))
+  .catch(() => alert('Error'));
+}
+
+
+function confirmarPedido() {
+  const notas = document.getElementById('carrito-notas')?.value || '';
+
+  fetch('/api/carrito/confirmar', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ notas })
+  })
+  .then(r => r.json())
+  .then(data => {
+    alert("Pedido #" + data.pedido_id + " creado");
+  });
 }
