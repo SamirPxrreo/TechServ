@@ -620,6 +620,27 @@ body {
   font-family: inherit; background: var(--white);
 }
 
+/* 🔥 aplicar colores al select igual que badges */
+.estado-select.estado-pendiente {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+.estado-select.estado-en-proceso {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.estado-select.estado-completado {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.estado-select.estado-cancelado {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
 /* Animación base */
 .anim {
   opacity: 0;
@@ -803,4 +824,51 @@ body {
   pointer-events: none;
   font-size: 20px;
   transition: all 0.8s cubic-bezier(.2,.8,.2,1);
+}
+
+/* ── ESTADO SELECT (ADMIN) ── */
+
+.estado-select {
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--gray-300);
+}
+
+/* Colores según estado */
+.estado-select.estado-pendiente {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+.estado-select.estado-en-proceso {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.estado-select.estado-completado {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.estado-select.estado-cancelado {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.btn-cerrar {
+  margin-top: 15px;
+  background: var(--gray-300);
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn-cerrar:hover {
+  background: var(--gray-500);
+  color: white;
 }
