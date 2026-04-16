@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-//  TECHSERV — main.js FINAL (FIX ADMIN)
+//  TECHSERV — main.js (ESTABLE)
 // ═══════════════════════════════════════
 
 // ── LOADER ─────────────────────────────
@@ -22,7 +22,7 @@ window.addEventListener('scroll', () => {
 
 // ── INIT ───────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  verificarSesion();
+  if (typeof verificarSesion === "function") verificarSesion();
   activarAnimaciones();
 });
 
@@ -33,9 +33,10 @@ function verificarSesion() {
     .then(data => {
       if (data.autenticado) {
         mostrarUsuario(data.nombre, data.rol);
-        cargarConteoCarrito();
+        cargarConteoCarrito && cargarConteoCarrito();
       }
-    });
+    })
+    .catch(() => {});
 }
 
 function mostrarUsuario(nombre, rol) {
@@ -47,22 +48,15 @@ function mostrarUsuario(nombre, rol) {
   guest.style.display = 'none';
   user.style.display = 'flex';
 
-  document.getElementById('nav-bienvenida').textContent = `Hola, ${nombre || 'Usuario'}`;
-
-  if (rol === 'admin') {
-    document.getElementById('nav-admin-link').style.display = 'inline-block';
+  const bienvenida = document.getElementById('nav-bienvenida');
+  if (bienvenida) {
+    bienvenida.textContent = `Hola, ${nombre || 'Usuario'}`;
   }
-}
 
-// ── MODALES ────────────────────────────
-function abrirModal(tipo) {
-  document.getElementById(`modal-${tipo}`).classList.add('active');
-  document.body.style.overflow = 'hidden';
-}
-
-function cerrarModal(tipo) {
-  document.getElementById(`modal-${tipo}`).classList.remove('active');
-  document.body.style.overflow = '';
+  const adminLink = document.getElementById('nav-admin-link');
+  if (rol === 'admin' && adminLink) {
+    adminLink.style.display = 'inline-block';
+  }
 }
 
 // ── ADMIN: CAMBIAR ESTADO ──────────────
@@ -81,10 +75,8 @@ function cambiarEstado(pedidoId, select) {
       return;
     }
 
-    // 🔥 CAMBIAR COLOR DINÁMICO
     select.className = "estado-select estado-" + nuevoEstado.replace(" ", "-");
 
-    // feedback visual
     select.style.border = "2px solid #00c853";
     setTimeout(() => select.style.border = "", 1000);
   })
@@ -100,16 +92,24 @@ function verDetalle(id) {
       const p = data.pedido;
       const items = data.items;
 
-      // 🔥 DEBUG (para confirmar en consola)
-      console.log("PEDIDO:", p);
+      if (!p) {
+        alert("❌ No se pudo cargar el pedido");
+        return;
+      }
 
-      // ✅ NOTA LIMPIA
-      const nota = p.notas && p.notas.trim() !== ""
-        ? p.notas
-        : '<span style="color:#999">Sin nota</span>';
+      // ✅ NOTA SEGURA
+      let notaHTML = '<span style="color:#999">Sin nota</span>';
+      if (p.notas && p.notas.trim() !== "") {
+        notaHTML = p.notas;
+      }
+
+      const detalleInfo = document.getElementById('detalle-info');
+      const detalleItems = document.getElementById('detalle-items');
+
+      if (!detalleInfo || !detalleItems) return;
 
       // 🔥 INFO
-      document.getElementById('detalle-info').innerHTML = `
+      detalleInfo.innerHTML = `
         <p><strong>Cliente:</strong> ${p.nombre}</p>
         <p><strong>Correo:</strong> ${p.correo}</p>
         <p><strong>Total:</strong> $${Number(p.total).toLocaleString('es-CO')}</p>
@@ -125,18 +125,16 @@ function verDetalle(id) {
           font-size:13px;
           color:#444;
         ">
-          ${p.notas && p.notas.trim() !== "" 
-            ? p.notas 
-            : '<span style="color:#999">Sin nota</span>'}
+          ${notaHTML}
         </div>
       `;
 
       // 🔥 ITEMS
       if (!items || items.length === 0) {
-        document.getElementById('detalle-items').innerHTML =
+        detalleItems.innerHTML =
           `<p style="color:#999">No hay items registrados</p>`;
       } else {
-        document.getElementById('detalle-items').innerHTML = items.map(i => `
+        detalleItems.innerHTML = items.map(i => `
           <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
             <span>${i.nombre}</span>
             <span>$${Number(i.precio).toLocaleString('es-CO')} x ${i.cantidad}</span>
@@ -144,13 +142,16 @@ function verDetalle(id) {
         `).join('');
       }
 
-      document.getElementById('modal-detalle').style.display = 'flex';
-    });
+      const modal = document.getElementById('modal-detalle');
+      if (modal) modal.style.display = 'flex';
+    })
+    .catch(() => alert("Error cargando detalle"));
 }
 
 // ── ADMIN: CERRAR DETALLE ──────────────
 function cerrarDetalle() {
-  document.getElementById('modal-detalle').style.display = 'none';
+  const modal = document.getElementById('modal-detalle');
+  if (modal) modal.style.display = 'none';
 }
 
 // ── UTIL ───────────────────────────────
