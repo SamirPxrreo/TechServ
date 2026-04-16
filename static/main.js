@@ -90,18 +90,23 @@ function doLogin() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ correo, contrasena })
   })
-  .then(r => r.json())
-  .then(data => {
-    if (data.error) {
-      mostrarError(errEl, data.error);
-    } else {
-      cerrarModal('login');
-      mostrarUsuario(data.nombre, data.rol);
-      cargarConteoCarrito();
-      mostrarToast(`✅ ${data.mensaje}`);
-    }
+  .then(async r => {
+    const data = await r.json();
+
+    if (!r.ok) throw data;
+    return data;
   })
-  .catch(() => mostrarError(errEl, 'Error de conexión'));
+  .then(data => {
+    cerrarModal('login');
+
+    // 🔥 FORZAMOS sesión correcta
+    verificarSesion();
+
+    mostrarToast(`✅ ${data.mensaje}`);
+  })
+  .catch(err => {
+    mostrarError(errEl, err.error || 'Error de conexión');
+  });
 }
 
 // ── REGISTRO (ORIGINAL) ────────────────
