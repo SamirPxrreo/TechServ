@@ -1,7 +1,6 @@
 // ═══════════════════════════════════════
-//  TECHSERV — main.js FINAL FUNCIONAL
+//  TECHSERV — main.js FINAL
 // ═══════════════════════════════════════
-
 
 // ── LOADER ─────────────────────────────
 window.addEventListener('load', () => {
@@ -9,6 +8,17 @@ window.addEventListener('load', () => {
   if (loader) loader.style.display = 'none';
 });
 
+// ── NAV SCROLL ─────────────────────────
+window.addEventListener('scroll', () => {
+  const nav = document.querySelector('.nav');
+  if (!nav) return;
+
+  if (window.scrollY > 50) {
+    nav.classList.add('nav-scrolled');
+  } else {
+    nav.classList.remove('nav-scrolled');
+  }
+});
 
 // ── INIT ───────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -16,184 +26,253 @@ document.addEventListener('DOMContentLoaded', () => {
   activarAnimaciones();
 });
 
-
 // ── SESIÓN ─────────────────────────────
 function verificarSesion() {
   fetch('/api/sesion')
     .then(r => r.json())
     .then(data => {
-
-      const user = document.getElementById('nav-user');
-      const guest = document.getElementById('nav-guest');
-
-      if (!data.autenticado) {
-        if (guest) guest.style.display = 'flex';
-        if (user) user.style.display = 'none';
-        return;
+      if (data.autenticado) {
+        mostrarUsuario(data.nombre, data.rol);
+        cargarConteoCarrito();
       }
-
-      if (guest) guest.style.display = 'none';
-      if (user) user.style.display = 'flex';
-
-      document.getElementById('nav-bienvenida').textContent =
-        `Hola, ${data.nombre}`;
-
-      if (data.rol === 'admin') {
-        const adminLink = document.getElementById('nav-admin-link');
-        if (adminLink) adminLink.style.display = 'inline-block';
-      }
-
-      cargarCarrito();
     });
 }
 
+function mostrarUsuario(nombre, rol) {
+  document.getElementById('nav-guest').style.display = 'none';
+  document.getElementById('nav-user').style.display = 'flex';
 
-// ── MODALES ────────────────────────────
+  const nombreSeguro = nombre || 'Usuario';
+
+  document.getElementById('nav-bienvenida').textContent = `Hola, ${nombreSeguro}`;
+
+  if (rol === 'admin') {
+    document.getElementById('nav-admin-link').style.display = 'inline-block';
+  }
+}
+
+// ── MODALES (ORIGINAL) ─────────────────
 function abrirModal(tipo) {
-  document.getElementById(`modal-${tipo}`).style.display = 'flex';
+  document.getElementById(`modal-${tipo}`).classList.add('active');
+  document.body.style.overflow = 'hidden';
 }
 
 function cerrarModal(tipo) {
-  document.getElementById(`modal-${tipo}`).style.display = 'none';
+  document.getElementById(`modal-${tipo}`).classList.remove('active');
+  document.body.style.overflow = '';
+
+  const err = document.getElementById(`${tipo}-error`);
+  if (err) {
+    err.style.display = 'none';
+    err.textContent = '';
+  }
 }
 
-function cerrarModalOverlay(e, tipo) {
-  if (e.target.id === `modal-${tipo}`) cerrarModal(tipo);
+function cerrarModalOverlay(event, tipo) {
+  if (event.target === event.currentTarget) cerrarModal(tipo);
 }
 
+function switchModal(desde, hacia) {
+  cerrarModal(desde);
+  setTimeout(() => abrirModal(hacia), 150);
+}
 
-// ── LOGIN ──────────────────────────────
+// ── LOGIN (ORIGINAL) ───────────────────
 function doLogin() {
+  const correo = document.getElementById('login-correo').value.trim();
+  const contrasena = document.getElementById('login-pass').value;
+  const errEl = document.getElementById('login-error');
+
+  if (!correo || !contrasena) {
+    mostrarError(errEl, 'Por favor completa todos los campos');
+    return;
+  }
+
   fetch('/api/login', {
     method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({
-      correo: document.getElementById('login-correo').value,
-      contrasena: document.getElementById('login-pass').value
-    })
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ correo, contrasena })
   })
-  .then(r => r.json())
+  .then(async r => {
+    const data = await r.json();
+
+    if (!r.ok) throw data;
+    return data;
+  })
   .then(data => {
-    if (data.error) {
-      alert(data.error);
-      return;
-    }
-    location.reload();
+    cerrarModal('login');
+
+    // 🔥 FORZAMOS sesión correcta
+    verificarSesion();
+
+    mostrarToast(`✅ ${data.mensaje}`);
+  })
+  .catch(err => {
+    mostrarError(errEl, err.error || 'Error de conexión');
   });
 }
 
-
-// ── REGISTRO ───────────────────────────
+// ── REGISTRO (ORIGINAL) ────────────────
 function doRegistro() {
+  const nombre = document.getElementById('reg-nombre').value.trim();
+  const telefono = document.getElementById('reg-telefono').value.trim();
+  const correo = document.getElementById('reg-correo').value.trim();
+  const contrasena = document.getElementById('reg-pass').value;
+  const errEl = document.getElementById('registro-error');
+
+  if (!nombre || !telefono || !correo || !contrasena) {
+    mostrarError(errEl, 'Por favor completa todos los campos');
+    return;
+  }
+
   fetch('/api/registro', {
     method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({
-      nombre: document.getElementById('reg-nombre').value,
-      telefono: document.getElementById('reg-telefono').value,
-      correo: document.getElementById('reg-correo').value,
-      contrasena: document.getElementById('reg-pass').value
-    })
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nombre, telefono, correo, contrasena })
   })
   .then(r => r.json())
   .then(data => {
     if (data.error) {
-      alert(data.error);
-      return;
+      mostrarError(errEl, data.error);
+    } else {
+      cerrarModal('registro');
+      mostrarUsuario(data.nombre, data.rol);
+      mostrarToast(`🎉 ${data.mensaje}`);
     }
-    location.reload();
-  });
+  })
+  .catch(() => mostrarError(errEl, 'Error de conexión'));
 }
-
 
 // ── LOGOUT ─────────────────────────────
 function cerrarSesion() {
   fetch('/api/logout', { method: 'POST' })
-    .then(() => location.reload());
+    .then(() => {
+      document.getElementById('nav-guest').style.display = 'flex';
+      document.getElementById('nav-user').style.display = 'none';
+      document.getElementById('nav-admin-link').style.display = 'none';
+      document.getElementById('carrito-panel').style.display = 'none';
+      mostrarToast('👋 Sesión cerrada');
+    });
 }
 
+// ── CARRITO (ORIGINAL FUNCIONAL) ───────
+function agregarAlCarrito(servicioId, nombre, btn = null) {
+  fetch('/api/sesion')
+    .then(r => r.json())
+    .then(sesion => {
+      if (!sesion.autenticado) {
+        abrirModal('login');
+        mostrarToast('🔐 Inicia sesión');
+        return;
+      }
 
-// ── CARRITO ────────────────────────────
-function agregarAlCarrito(id) {
-  fetch('/api/carrito/agregar', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ servicio_id: id })
-  })
-  .then(r => r.json())
-  .then(() => {
-    mostrarToast("Agregado al carrito");
+      fetch('/api/carrito/agregar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ servicio_id: servicioId })
+      })
+      .then(r => r.json())
+      .then(() => {
+        mostrarToast(`✅ ${nombre} agregado`);
+        cargarConteoCarrito();
+        cargarCarrito();
+
+        if (btn) animarAlCarrito(btn); // 🔥 aquí se activa animación
+      });
+    });
+}
+
+function cargarConteoCarrito() {
+  fetch('/api/carrito')
+    .then(r => r.json())
+    .then(data => {
+      document.getElementById('carrito-count').textContent =
+        data.items ? data.items.length : 0;
+    });
+}
+
+function toggleCarrito() {
+  const panel = document.getElementById('carrito-panel');
+
+  if (panel.style.display === 'none' || panel.style.display === '') {
+    panel.style.display = 'block';
     cargarCarrito();
-  });
+  } else {
+    panel.style.display = 'none';
+  }
 }
-
 
 function cargarCarrito() {
   fetch('/api/carrito')
     .then(r => r.json())
     .then(data => {
-
-      const cont = document.getElementById('carrito-count');
-      if (cont) cont.textContent = data.items.length;
-
-      const itemsDiv = document.getElementById('carrito-items');
+      const container = document.getElementById('carrito-items');
       const footer = document.getElementById('carrito-footer');
+      const totalEl = document.getElementById('carrito-total');
 
-      if (!itemsDiv) return;
-
-      if (data.items.length === 0) {
-        itemsDiv.innerHTML = '<p class="carrito-vacio">Vacío</p>';
-        if (footer) footer.style.display = 'none';
+      if (!data.items || data.items.length === 0) {
+        container.innerHTML = '<p class="carrito-vacio">🛒 Tu carrito está vacío</p>';
+        footer.style.display = 'none';
         return;
       }
 
-      itemsDiv.innerHTML = data.items.map(i => `
+      container.innerHTML = data.items.map(item => `
         <div class="carrito-item">
-          <span>${i.nombre}</span>
-          <span>$${Number(i.precio).toLocaleString()} x ${i.cantidad}</span>
+          <div class="ci-info">
+            <div class="ci-nombre">${item.icono} ${item.nombre}</div>
+            <div class="ci-precio">$${Number(item.precio).toLocaleString('es-CO')} × ${item.cantidad}</div>
+          </div>
+          <div style="font-weight:700">$${Number(item.subtotal).toLocaleString('es-CO')}</div>
+          <button class="ci-del" onclick="eliminarDelCarrito(${item.id})">×</button>
         </div>
       `).join('');
 
-      document.getElementById('carrito-total').textContent =
-        '$' + Number(data.total).toLocaleString();
-
-      if (footer) footer.style.display = 'block';
+      totalEl.textContent = `$${Number(data.total).toLocaleString('es-CO')}`;
+      footer.style.display = 'block';
     });
 }
 
-
-function toggleCarrito() {
-  const panel = document.getElementById('carrito-panel');
-  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+function eliminarDelCarrito(id) {
+  fetch(`/api/carrito/eliminar/${id}`, { method: 'DELETE' })
+    .then(() => {
+      cargarCarrito();
+      cargarConteoCarrito();
+      mostrarToast('🗑️ Eliminado');
+    });
 }
-
 
 function confirmarPedido() {
   const notas = document.getElementById('carrito-notas').value;
 
   fetch('/api/carrito/confirmar', {
     method: 'POST',
-    headers: {'Content-Type':'application/json'},
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ notas })
   })
   .then(r => r.json())
   .then(data => {
-    alert("Pedido #" + data.pedido_id + " creado");
-    cargarCarrito();
+    if (data.error) {
+      mostrarToast(`❌ ${data.error}`);
+    } else {
+      document.getElementById('carrito-panel').style.display = 'none';
+      document.getElementById('carrito-count').textContent = '0';
+      mostrarToast(`🎉 Pedido #${data.pedido_id} confirmado`);
+    }
   });
 }
 
-
-// ── TOAST ──────────────────────────────
-function mostrarToast(msg) {
-  const toast = document.getElementById('toast');
-  if (!toast) return;
-
-  toast.textContent = msg;
-  toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), 2000);
+// ── UTIL ───────────────────────────────
+function mostrarError(el, msg) {
+  el.textContent = msg;
+  el.style.display = 'block';
 }
 
+function mostrarToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
 
 // ── ANIMACIONES ────────────────────────
 function activarAnimaciones() {
@@ -203,7 +282,33 @@ function activarAnimaciones() {
         entry.target.classList.add('show');
       }
     });
-  });
+  }, { threshold: 0.2 });
 
   document.querySelectorAll('.anim').forEach(el => observer.observe(el));
+}
+
+function animarAlCarrito(btn) {
+  const carrito = document.querySelector('.carrito-btn');
+  if (!carrito) return;
+
+  const rectBtn = btn.getBoundingClientRect();
+  const rectCart = carrito.getBoundingClientRect();
+
+  const fly = document.createElement('div');
+  fly.className = 'fly-item';
+  fly.innerText = '🛒';
+
+  fly.style.left = rectBtn.left + 'px';
+  fly.style.top = rectBtn.top + 'px';
+
+  document.body.appendChild(fly);
+
+  setTimeout(() => {
+    fly.style.left = rectCart.left + 'px';
+    fly.style.top = rectCart.top + 'px';
+    fly.style.opacity = '0';
+    fly.style.transform = 'scale(0.5)';
+  }, 10);
+
+  setTimeout(() => fly.remove(), 800);
 }
