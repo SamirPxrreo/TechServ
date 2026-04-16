@@ -41,7 +41,10 @@ function verificarSesion() {
 function mostrarUsuario(nombre, rol) {
   document.getElementById('nav-guest').style.display = 'none';
   document.getElementById('nav-user').style.display = 'flex';
-  document.getElementById('nav-bienvenida').textContent = `Hola, ${nombre}`;
+
+  const nombreSeguro = nombre || 'Usuario';
+
+  document.getElementById('nav-bienvenida').textContent = `Hola, ${nombreSeguro}`;
 
   if (rol === 'admin') {
     document.getElementById('nav-admin-link').style.display = 'inline-block';
